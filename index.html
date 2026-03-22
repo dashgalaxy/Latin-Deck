@@ -318,24 +318,71 @@ body {
 .empty-state h3 { color: var(--text); margin-bottom: 8px; }
 
 /* QUIZ SOURCE SELECTOR */
-.quiz-source {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+/* Quiz selection screen */
+.qs-section { margin-bottom: 20px; }
+.qs-heading {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
 }
-.quiz-source button {
-  padding: 8px 14px;
-  border-radius: 20px;
+.qs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.qs-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
 }
-.quiz-source button.active {
-  background: var(--accent);
-  border-color: var(--accent);
+.qs-btn:active { transform: scale(0.97); }
+.qs-btn .qs-icon { font-size: 24px; }
+.qs-btn .qs-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+.qs-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Quiz active screen */
+#quiz-active.hidden { display: none; }
+#quiz-select.hidden { display: none; }
+.qa-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.qa-back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 6px 0;
+  font-weight: 600;
+}
+.qa-label {
+  font-size: 15px;
+  color: var(--text-dim);
 }
 
 /* SR DONE */
@@ -669,13 +716,41 @@ body {
 
 <!-- QUIZ -->
 <div class="screen" id="screen-quiz">
-  <div class="screen-header">
-    <h1>Quiz Mode</h1>
-    <p>4-choice multiple choice</p>
+  <!-- Phase 1: Source Selection -->
+  <div id="quiz-select">
+    <div class="screen-header">
+      <h1>Quiz Mode</h1>
+      <p>Choose a word source to start</p>
+    </div>
+
+    <div class="qs-section">
+      <h3 class="qs-heading">By SRS Rating</h3>
+      <div class="qs-grid" id="qs-rating-btns"></div>
+    </div>
+
+    <div class="qs-section">
+      <h3 class="qs-heading">Special</h3>
+      <div class="qs-grid" id="qs-special-btns"></div>
+    </div>
+
+    <div class="qs-section">
+      <h3 class="qs-heading">By Deck</h3>
+      <div class="qs-grid" id="qs-deck-btns"></div>
+    </div>
   </div>
-  <div class="quiz-source" id="quiz-source"></div>
-  <div class="quiz-score" id="quiz-score"></div>
-  <div id="quiz-area"></div>
+
+  <!-- Phase 2: Active Quiz -->
+  <div id="quiz-active" class="hidden">
+    <div class="qa-topbar">
+      <button class="qa-back" onclick="quizBackToSelect()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      <span class="qa-label" id="qa-label"></span>
+    </div>
+    <div class="quiz-score" id="quiz-score"></div>
+    <div id="quiz-area"></div>
+  </div>
 </div>
 
 <!-- STATS -->
@@ -745,7 +820,8 @@ function initData() {
       ease: 2.5,
       due: Date.now(),
       reps: 0,
-      lapses: 0
+      lapses: 0,
+      lastRating: -1   // 0=again, 1=hard, 2=good, 3=easy, -1=unrated
     };
   });
   const data = {
@@ -873,6 +949,8 @@ function reviewCard(rank, quality) {
   DATA.totalReviews++;
   updateStreak();
   DATA.lastReview = Date.now();
+
+  c.lastRating = quality;
 
   if (quality === 0) {
     c.interval = 1;
@@ -1127,33 +1205,98 @@ function shuffleDeck() {
 
 // ===== QUIZ SCREEN =====
 let quizDeck = 'all';
+let quizDeckLabel = '';
 let quizCurrent = null;
 let quizAnswered = false;
 let quizSessionCorrect = 0;
 let quizSessionTotal = 0;
+let quizInProgress = false;
+
+const RATING_NAMES = ['Again', 'Hard', 'Good', 'Easy'];
+const RATING_ICONS = ['\u{1F534}', '\u{1F7E0}', '\u{1F7E2}', '\u{1F535}'];
+
+function getWordsWithRating(rating) {
+  return WORDS.filter(w => {
+    const c = DATA.cards[w.rank];
+    return c.reps > 0 && (c.lastRating === rating || (c.lastRating === undefined && inferRating(c) === rating));
+  });
+}
+
+function inferRating(c) {
+  if (c.lapses > 0 || c.ease < 1.5) return 0;
+  if (c.ease < 2.0) return 1;
+  if (c.ease >= 3.0) return 3;
+  return 2;
+}
 
 function renderQuiz() {
-  const src = document.getElementById('quiz-source');
+  if (quizInProgress) {
+    showQuizActive();
+    return;
+  }
+  showQuizSelect();
+}
+
+function showQuizSelect() {
+  quizInProgress = false;
+  document.getElementById('quiz-select').classList.remove('hidden');
+  document.getElementById('quiz-active').classList.add('hidden');
+
+  // Rating buttons
+  const ratingEl = document.getElementById('qs-rating-btns');
+  ratingEl.innerHTML = RATING_NAMES.map((name, i) => {
+    const count = getWordsWithRating(i).length;
+    const disabled = count < 4 ? 'disabled' : '';
+    return `<button class="qs-btn ${disabled}" onclick="startQuiz('rating-${i}', '${RATING_ICONS[i]} ${name}')">
+      <span class="qs-icon">${RATING_ICONS[i]}</span>${name}
+      <span class="qs-count">${count} words</span>
+    </button>`;
+  }).join('');
+
+  // Special buttons
   const missedCount = Object.keys(DATA.quizWrong).length;
-  const options = [
-    {key:'all', label:'All 1000'},
-    {key:'missed', label:`Missed (${missedCount})`}
-  ];
-  SUB_DECKS.forEach(d => options.push({key:`${d.start}-${d.end}`, label: d.label}));
+  const allCount = WORDS.length;
+  const specialEl = document.getElementById('qs-special-btns');
+  specialEl.innerHTML = `
+    <button class="qs-btn" onclick="startQuiz('all', 'All Words')">
+      <span class="qs-icon">\u{1F30D}</span>All Words
+      <span class="qs-count">${allCount} words</span>
+    </button>
+    <button class="qs-btn ${missedCount < 4 ? 'disabled' : ''}" onclick="startQuiz('missed', 'Missed Words')">
+      <span class="qs-icon">\u{274C}</span>Missed
+      <span class="qs-count">${missedCount} words</span>
+    </button>`;
 
-  src.innerHTML = options.map(o =>
-    `<button class="${quizDeck===o.key?'active':''}" onclick="setQuizDeck('${o.key}')">${o.label}</button>`
+  // Deck buttons
+  const deckEl = document.getElementById('qs-deck-btns');
+  deckEl.innerHTML = SUB_DECKS.map(d =>
+    `<button class="qs-btn" onclick="startQuiz('${d.start}-${d.end}', '${d.label}')">
+      <span class="qs-icon">\u{1F4D6}</span>${d.label}
+      <span class="qs-count">20 words</span>
+    </button>`
   ).join('');
+}
 
+function startQuiz(key, label) {
+  quizDeck = key;
+  quizDeckLabel = label;
+  quizSessionCorrect = 0;
+  quizSessionTotal = 0;
+  quizInProgress = true;
+  showQuizActive();
+}
+
+function showQuizActive() {
+  document.getElementById('quiz-select').classList.add('hidden');
+  document.getElementById('quiz-active').classList.remove('hidden');
+  document.getElementById('qa-label').textContent = quizDeckLabel;
   renderQuizScore();
   nextQuizQuestion();
 }
 
-function setQuizDeck(key) {
-  quizDeck = key;
-  quizSessionCorrect = 0;
-  quizSessionTotal = 0;
-  renderQuiz();
+function quizBackToSelect() {
+  quizInProgress = false;
+  showQuizSelect();
 }
 
 function getQuizPool() {
@@ -1161,6 +1304,10 @@ function getQuizPool() {
   if (quizDeck === 'missed') {
     const missedRanks = Object.keys(DATA.quizWrong).map(Number);
     return WORDS.filter(w => missedRanks.includes(w.rank));
+  }
+  if (quizDeck.startsWith('rating-')) {
+    const rating = parseInt(quizDeck.split('-')[1]);
+    return getWordsWithRating(rating);
   }
   const [s, e] = quizDeck.split('-').map(Number);
   return WORDS.slice(s, e);
@@ -1174,7 +1321,11 @@ function renderQuizScore() {
 
 function nextQuizQuestion() {
   const pool = getQuizPool();
-  if (pool.length < 4) return;
+  if (pool.length < 4) {
+    document.getElementById('quiz-area').innerHTML =
+      '<div style="text-align:center;padding:40px;color:var(--text-dim);">Not enough words in this category (need at least 4).</div>';
+    return;
+  }
 
   quizAnswered = false;
   const idx = Math.floor(Math.random() * pool.length);
@@ -1314,6 +1465,7 @@ function resetQuizAll() {
   DATA.quizCorrect = 0;
   quizSessionCorrect = 0;
   quizSessionTotal = 0;
+  quizInProgress = false;
   saveData(DATA);
   renderStats();
 }
@@ -1557,8 +1709,10 @@ document.addEventListener('keydown', (e) => {
       else if (e.key === '3') answerSR(2);
       else if (e.key === '4') answerSR(3);
     }
-  } else if (currentScreen === 'quiz') {
-    if (!quizAnswered && quizCurrent) {
+  } else if (currentScreen === 'quiz' && quizInProgress) {
+    if (e.code === 'Escape' || e.code === 'Backspace') {
+      quizBackToSelect();
+    } else if (!quizAnswered && quizCurrent) {
       const opts = document.querySelectorAll('.quiz-option');
       if (e.key >= '1' && e.key <= '4' && opts[e.key - 1]) {
         opts[e.key - 1].click();
