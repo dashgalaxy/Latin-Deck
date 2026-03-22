@@ -385,6 +385,50 @@ body {
   color: var(--text-dim);
 }
 
+/* Write mode */
+#write-active.hidden { display: none; }
+#write-select.hidden { display: none; }
+.write-input-wrap {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+.write-input {
+  flex: 1;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 18px;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.write-input:focus { border-color: var(--accent); }
+.write-input.correct { border-color: var(--success); background: rgba(78,204,163,0.1); }
+.write-input.wrong { border-color: var(--fail); background: rgba(233,69,96,0.1); }
+.write-submit {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  white-space: nowrap;
+}
+.write-submit:active { opacity: 0.85; }
+.write-answer {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 17px;
+  min-height: 24px;
+}
+.write-answer .wa-correct { color: var(--success); font-weight: 600; }
+.write-answer .wa-wrong { color: var(--fail); }
+.write-answer .wa-expected { color: var(--text); font-weight: 600; }
+
 /* SR DONE */
 .sr-done {
   text-align: center;
@@ -753,6 +797,45 @@ body {
   </div>
 </div>
 
+<!-- WRITE -->
+<div class="screen" id="screen-write">
+  <!-- Phase 1: Source Selection -->
+  <div id="write-select">
+    <div class="screen-header">
+      <h1>Write Mode</h1>
+      <p>Type the Latin spelling from English</p>
+    </div>
+
+    <div class="qs-section">
+      <h3 class="qs-heading">By SRS Rating</h3>
+      <div class="qs-grid" id="ws-rating-btns"></div>
+    </div>
+
+    <div class="qs-section">
+      <h3 class="qs-heading">Special</h3>
+      <div class="qs-grid" id="ws-special-btns"></div>
+    </div>
+
+    <div class="qs-section">
+      <h3 class="qs-heading">By Deck</h3>
+      <div class="qs-grid" id="ws-deck-btns"></div>
+    </div>
+  </div>
+
+  <!-- Phase 2: Active Write -->
+  <div id="write-active" class="hidden">
+    <div class="qa-topbar">
+      <button class="qa-back" onclick="writeBackToSelect()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      <span class="qa-label" id="wa-label"></span>
+    </div>
+    <div class="quiz-score" id="write-score"></div>
+    <div id="write-area"></div>
+  </div>
+</div>
+
 <!-- STATS -->
 <div class="screen" id="screen-stats">
   <div class="screen-header">
@@ -782,6 +865,10 @@ body {
   <button onclick="showScreen('quiz')" id="nav-quiz">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
     Quiz
+  </button>
+  <button onclick="showScreen('write')" id="nav-write">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+    Write
   </button>
   <button onclick="showScreen('stats')" id="nav-stats">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -983,6 +1070,7 @@ function showScreen(name) {
   if (name === 'learn') renderLearn();
   else if (name === 'decks') renderDecks();
   else if (name === 'quiz') renderQuiz();
+  else if (name === 'write') renderWrite();
   else if (name === 'stats') renderStats();
   else if (name === 'settings') renderSettings();
 }
@@ -1393,6 +1481,181 @@ function quizAnswer(btn, chosenRank) {
   document.getElementById('quiz-next-btn').style.display = 'block';
 }
 
+// ===== WRITE MODE =====
+let writeDeck = 'all';
+let writeDeckLabel = '';
+let writeCurrent = null;
+let writeAnswered = false;
+let writeSessionCorrect = 0;
+let writeSessionTotal = 0;
+let writeInProgress = false;
+
+function normalizeLatin(str) {
+  // Strip macrons/diacritics and lowercase for comparison
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function renderWrite() {
+  if (writeInProgress) {
+    showWriteActive();
+    return;
+  }
+  showWriteSelect();
+}
+
+function showWriteSelect() {
+  writeInProgress = false;
+  document.getElementById('write-select').classList.remove('hidden');
+  document.getElementById('write-active').classList.add('hidden');
+
+  // Rating buttons
+  const ratingEl = document.getElementById('ws-rating-btns');
+  ratingEl.innerHTML = RATING_NAMES.map((name, i) => {
+    const count = getWordsWithRating(i).length;
+    const disabled = count === 0 ? 'disabled' : '';
+    return `<button class="qs-btn ${disabled}" onclick="startWrite('rating-${i}', '${RATING_ICONS[i]} ${name}')">
+      <span class="qs-icon">${RATING_ICONS[i]}</span>${name}
+      <span class="qs-count">${count} words</span>
+    </button>`;
+  }).join('');
+
+  // Special buttons
+  const missedCount = Object.keys(DATA.writeWrong || {}).length;
+  const allCount = WORDS.length;
+  const specialEl = document.getElementById('ws-special-btns');
+  specialEl.innerHTML = `
+    <button class="qs-btn" onclick="startWrite('all', 'All Words')">
+      <span class="qs-icon">\u{1F30D}</span>All Words
+      <span class="qs-count">${allCount} words</span>
+    </button>
+    <button class="qs-btn ${missedCount === 0 ? 'disabled' : ''}" onclick="startWrite('missed', 'Missed Words')">
+      <span class="qs-icon">\u{274C}</span>Missed
+      <span class="qs-count">${missedCount} words</span>
+    </button>`;
+
+  // Deck buttons
+  const deckEl = document.getElementById('ws-deck-btns');
+  deckEl.innerHTML = SUB_DECKS.map(d =>
+    `<button class="qs-btn" onclick="startWrite('${d.start}-${d.end}', '${d.label}')">
+      <span class="qs-icon">\u{1F4D6}</span>${d.label}
+      <span class="qs-count">20 words</span>
+    </button>`
+  ).join('');
+}
+
+function startWrite(key, label) {
+  writeDeck = key;
+  writeDeckLabel = label;
+  writeSessionCorrect = 0;
+  writeSessionTotal = 0;
+  writeInProgress = true;
+  showWriteActive();
+}
+
+function showWriteActive() {
+  document.getElementById('write-select').classList.add('hidden');
+  document.getElementById('write-active').classList.remove('hidden');
+  document.getElementById('wa-label').textContent = writeDeckLabel;
+  renderWriteScore();
+  nextWriteQuestion();
+}
+
+function writeBackToSelect() {
+  writeInProgress = false;
+  showWriteSelect();
+}
+
+function getWritePool() {
+  if (writeDeck === 'all') return WORDS;
+  if (writeDeck === 'missed') {
+    const missedRanks = Object.keys(DATA.writeWrong || {}).map(Number);
+    return WORDS.filter(w => missedRanks.includes(w.rank));
+  }
+  if (writeDeck.startsWith('rating-')) {
+    const rating = parseInt(writeDeck.split('-')[1]);
+    return getWordsWithRating(rating);
+  }
+  const [s, e] = writeDeck.split('-').map(Number);
+  return WORDS.slice(s, e);
+}
+
+function renderWriteScore() {
+  const wrongTotal = Object.values(DATA.writeWrong || {}).reduce((a,b) => a+b, 0);
+  document.getElementById('write-score').innerHTML =
+    `Session: <b>${writeSessionCorrect}/${writeSessionTotal}</b> | Total wrong: <b>${wrongTotal}</b>`;
+}
+
+function nextWriteQuestion() {
+  const pool = getWritePool();
+  if (pool.length === 0) {
+    document.getElementById('write-area').innerHTML =
+      '<div style="text-align:center;padding:40px;color:var(--text-dim);">No words in this category yet.</div>';
+    return;
+  }
+
+  writeAnswered = false;
+  const idx = Math.floor(Math.random() * pool.length);
+  writeCurrent = pool[idx];
+
+  const area = document.getElementById('write-area');
+  area.innerHTML = `
+    <div class="flashcard" style="cursor:default; min-height:160px;">
+      <span class="rank-badge">#${writeCurrent.rank}</span>
+      <div class="english" style="color:var(--text);font-size:22px;">${writeCurrent.english}</div>
+      <div class="pos">${writeCurrent.pos}</div>
+    </div>
+    <div class="write-input-wrap">
+      <input type="text" class="write-input" id="write-input" placeholder="Type the Latin word..." autocomplete="off" autocapitalize="none" spellcheck="false">
+      <button class="write-submit" id="write-submit-btn" onclick="submitWriteAnswer()">Check</button>
+    </div>
+    <div class="write-answer" id="write-feedback"></div>
+    <button class="quiz-next" id="write-next-btn" onclick="nextWriteQuestion();renderWriteScore();">Next Word</button>`;
+
+  setTimeout(() => {
+    const inp = document.getElementById('write-input');
+    if (inp) inp.focus();
+  }, 50);
+}
+
+function submitWriteAnswer() {
+  if (writeAnswered) return;
+  const inp = document.getElementById('write-input');
+  const userAnswer = inp.value;
+  if (!userAnswer.trim()) return;
+
+  writeAnswered = true;
+  writeSessionTotal++;
+  DATA.totalWrites = (DATA.totalWrites || 0) + 1;
+
+  const normalized = normalizeLatin(userAnswer);
+  const expected = normalizeLatin(writeCurrent.latin);
+  const correct = normalized === expected;
+
+  const feedback = document.getElementById('write-feedback');
+
+  if (correct) {
+    writeSessionCorrect++;
+    DATA.writeCorrect = (DATA.writeCorrect || 0) + 1;
+    inp.classList.add('correct');
+    feedback.innerHTML = `<span class="wa-correct">Correct!</span>`;
+    playCorrect();
+    doHaptic(10);
+  } else {
+    inp.classList.add('wrong');
+    if (!DATA.writeWrong) DATA.writeWrong = {};
+    DATA.writeWrong[writeCurrent.rank] = (DATA.writeWrong[writeCurrent.rank] || 0) + 1;
+    feedback.innerHTML = `<span class="wa-wrong">Incorrect.</span> Expected: <span class="wa-expected">${writeCurrent.latin}</span>`;
+    playWrong();
+    doHaptic(30);
+  }
+
+  inp.readOnly = true;
+  document.getElementById('write-submit-btn').style.display = 'none';
+  document.getElementById('write-next-btn').style.display = 'block';
+  saveData(DATA);
+  renderWriteScore();
+}
+
 // ===== STATS SCREEN =====
 function renderStats() {
   const learned = WORDS.filter(w => DATA.cards[w.rank].reps > 0).length;
@@ -1435,6 +1698,11 @@ function renderStats() {
         <div class="big-num">${DATA.totalQuizzes ? Math.round(DATA.quizCorrect/DATA.totalQuizzes*100) : 0}%</div>
         <div class="sub">${DATA.quizCorrect}/${DATA.totalQuizzes} correct</div>
       </div>
+      <div class="stat-card">
+        <h3>Write Accuracy</h3>
+        <div class="big-num">${(DATA.totalWrites||0) ? Math.round((DATA.writeCorrect||0)/(DATA.totalWrites||1)*100) : 0}%</div>
+        <div class="sub">${DATA.writeCorrect||0}/${DATA.totalWrites||0} correct</div>
+      </div>
     </div>
     <div class="stat-card" style="margin-top:10px;">
       <h3>Cards Due Now</h3>
@@ -1469,6 +1737,23 @@ function resetQuizAll() {
   saveData(DATA);
   renderStats();
 }
+function resetWriteWrong() {
+  if (!confirm('Reset all write wrong counts?')) return;
+  DATA.writeWrong = {};
+  saveData(DATA);
+  renderStats();
+}
+function resetWriteAll() {
+  if (!confirm('Reset all write statistics?')) return;
+  DATA.writeWrong = {};
+  DATA.totalWrites = 0;
+  DATA.writeCorrect = 0;
+  writeSessionCorrect = 0;
+  writeSessionTotal = 0;
+  writeInProgress = false;
+  saveData(DATA);
+  renderStats();
+}
 function resetSR() {
   if (!confirm('Reset all spaced repetition progress? This cannot be undone.')) return;
   WORDS.forEach(w => {
@@ -1483,6 +1768,10 @@ function resetAll() {
   DATA = initData();
   quizSessionCorrect = 0;
   quizSessionTotal = 0;
+  writeSessionCorrect = 0;
+  writeSessionTotal = 0;
+  writeInProgress = false;
+  quizInProgress = false;
   renderStats();
 }
 
@@ -1618,6 +1907,14 @@ function renderSettings() {
         <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetQuizAll()">Reset</button>
       </div>
       <div class="setting-row">
+        <span class="setting-label">Write wrong counts</span>
+        <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetWriteWrong()">Reset</button>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">All write stats</span>
+        <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetWriteAll()">Reset</button>
+      </div>
+      <div class="setting-row">
         <span class="setting-label">SR progress</span>
         <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetSR()">Reset</button>
       </div>
@@ -1722,6 +2019,19 @@ document.addEventListener('keydown', (e) => {
       nextQuizQuestion();
       renderQuizScore();
     }
+  } else if (currentScreen === 'write' && writeInProgress) {
+    if (e.code === 'Escape') {
+      writeBackToSelect();
+    } else if (!writeAnswered && e.code === 'Enter') {
+      e.preventDefault();
+      submitWriteAnswer();
+    } else if (writeAnswered && (e.code === 'Enter' || e.code === 'Space')) {
+      // Only advance with Space if the input isn't focused (avoid conflict)
+      if (e.code === 'Space' && e.target.tagName === 'INPUT') return;
+      e.preventDefault();
+      nextWriteQuestion();
+      renderWriteScore();
+    }
   }
 });
 
@@ -1795,7 +2105,8 @@ const obSlides = [
     features: [
       { icon: '\u{1F501}', title: 'Spaced Repetition', desc: 'Cards reappear at optimal intervals. Rate yourself Again, Hard, Good, or Easy.' },
       { icon: '\u{1F4CB}', title: '50 Sub-Decks', desc: '20 words each, sorted by frequency. Browse freely and tap to reveal meanings.' },
-      { icon: '\u{2753}', title: 'Quiz Mode', desc: 'Four-choice questions. Filter by deck or review only your missed words.' }
+      { icon: '\u{2753}', title: 'Quiz Mode', desc: 'Four-choice questions. Filter by deck or review only your missed words.' },
+      { icon: '\u{270D}\uFE0F', title: 'Write Mode', desc: 'Type the Latin spelling from English prompts. Macrons are ignored.' }
     ]
   },
   {
