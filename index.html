@@ -328,9 +328,32 @@ body {
 }
 .sr-done h2 { font-size: 24px; margin-bottom: 8px; color: var(--success); }
 .sr-done p { color: var(--text-dim); font-size: 14px; }
+
+/* SAVE TOAST */
+.save-toast {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  background: var(--success);
+  color: #1a1a2e;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 200;
+  pointer-events: none;
+}
+.save-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
 </style>
 </head>
 <body>
+<div class="save-toast" id="save-toast">Progress saved</div>
 
 <!-- LEARN (Spaced Repetition) -->
 <div class="screen active" id="screen-learn">
@@ -406,8 +429,8 @@ const WORDS = [{"rank": 1, "latin": "et", "pos": "conjunction", "english": "and,
 // ===== DATA LAYER =====
 const STORAGE_KEY = 'vulgate_sr_v2';
 const SUB_DECKS = [];
-for (let i = 0; i < 1000; i += 50) {
-  SUB_DECKS.push({ start: i, end: i + 50, label: `Words ${i+1}–${i+50}` });
+for (let i = 0; i < 1000; i += 20) {
+  SUB_DECKS.push({ start: i, end: i + 20, label: `Words ${i+1}–${i+20}` });
 }
 
 function loadData() {
@@ -443,8 +466,16 @@ function initData() {
   return data;
 }
 
+let _saveToast = null;
 function saveData(data) {
+  data.lastSaved = Date.now();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  const toast = document.getElementById('save-toast');
+  if (toast) {
+    toast.classList.add('show');
+    clearTimeout(_saveToast);
+    _saveToast = setTimeout(() => toast.classList.remove('show'), 1200);
+  }
 }
 
 let DATA = loadData();
@@ -591,9 +622,9 @@ function renderDecks() {
       <div class="deck-item" onclick="openDeck(${d.start}, ${d.end})">
         <div class="deck-info">
           <h3>${d.label}</h3>
-          <p>${learned}/50 reviewed</p>
+          <p>${learned}/20 reviewed</p>
         </div>
-        <span class="deck-count">${d.end <= 100 ? 'Core' : d.end <= 250 ? 'Common' : d.end <= 500 ? 'Intermediate' : 'Advanced'}</span>
+        <span class="deck-count">${d.end <= 100 ? 'Core' : d.end <= 300 ? 'Common' : d.end <= 600 ? 'Intermediate' : 'Advanced'}</span>
       </div>`;
   }).join('');
 }
@@ -767,6 +798,11 @@ function renderStats() {
     <div class="stat-card" style="margin-top:10px;">
       <h3>Cards Due Now</h3>
       <div class="big-num">${due}</div>
+    </div>
+    <div class="stat-card" style="margin-top:10px;">
+      <h3>Progress Saved</h3>
+      <div class="sub">${DATA.lastSaved ? 'Last saved: ' + new Date(DATA.lastSaved).toLocaleString() : 'Not yet saved'}</div>
+      <div class="sub" style="margin-top:4px;">All progress is automatically saved to this device.</div>
     </div>
 
     ${topMissed ? `
