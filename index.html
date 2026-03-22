@@ -121,6 +121,25 @@ body {
   font-size: 11px;
   color: var(--text-dim);
 }
+.audio-btn {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  background: rgba(128,128,128,0.15);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-dim);
+  transition: color 0.15s, background 0.15s;
+}
+.audio-btn:hover { color: var(--accent); background: rgba(128,128,128,0.25); }
+.audio-btn:active { transform: scale(0.9); }
+.audio-btn svg { width: 18px; height: 18px; }
 
 /* SR BUTTONS */
 .sr-buttons {
@@ -1014,6 +1033,22 @@ function playClick() {
   playTone(600, 0.04, 'sine', 0.1);
 }
 
+function getAudioPath(word) {
+  const rank = word.rank;
+  const start = Math.floor((rank - 1) / 20) * 20 + 1;
+  const end = start + 19;
+  const folder = String(start).padStart(3, '0') + '-' + String(end).padStart(3, '0');
+  return `audio/${folder}/${String(rank).padStart(3, '0')}_${word.latin}.mp3`;
+}
+
+function playWordAudio(rank) {
+  const w = WORDS.find(w => w.rank === rank);
+  if (!w) return;
+  const path = getAudioPath(w);
+  const audio = new Audio(path);
+  audio.play().catch(() => {}); // silently fail for 0-byte dummies
+}
+
 function doHaptic(ms) {
   if (SETTINGS.haptic && navigator.vibrate) {
     navigator.vibrate(ms || 10);
@@ -1167,6 +1202,9 @@ function renderSRCard() {
   if (!srRevealed) {
     area.innerHTML = `
       <div class="flashcard" onclick="revealSR()">
+        <button class="audio-btn" onclick="event.stopPropagation();playWordAudio(${w.rank});" title="Play audio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.08"/></svg>
+        </button>
         <span class="rank-badge">#${w.rank}</span>
         <div class="${latinFirst ? 'latin' : 'english'}" style="${latinFirst ? '' : 'color:var(--text);font-size:var(--latin-size,40px);font-weight:700;'}">${front}</div>
         ${latinFirst ? posHtml : ''}
@@ -1175,6 +1213,9 @@ function renderSRCard() {
   } else {
     area.innerHTML = `
       <div class="flashcard">
+        <button class="audio-btn" onclick="playWordAudio(${w.rank});" title="Play audio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.08"/></svg>
+        </button>
         <span class="rank-badge">#${w.rank}</span>
         <div class="${latinFirst ? 'latin' : 'english'}" style="${latinFirst ? '' : 'color:var(--text);font-size:var(--latin-size,40px);font-weight:700;'}">${front}</div>
         ${posHtml}
