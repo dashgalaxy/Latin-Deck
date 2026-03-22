@@ -523,10 +523,115 @@ body {
   font-family: inherit;
   font-size: 11px;
 }
+
+/* ONBOARDING OVERLAY */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 24px;
+}
+.onboarding-overlay.hidden { display: none; }
+
+.onboard-card {
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+.onboard-card .ob-icon {
+  font-size: 64px;
+  margin-bottom: 12px;
+}
+.onboard-card h1 {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+.onboard-card .ob-sub {
+  font-size: 15px;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+
+.ob-features {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.ob-feature {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.ob-feature .ob-feat-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  width: 40px;
+  text-align: center;
+}
+.ob-feature .ob-feat-text h3 {
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+.ob-feature .ob-feat-text p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.ob-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.ob-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--toggle-bg);
+  transition: background 0.2s;
+}
+.ob-dot.active { background: var(--accent); }
+
+.ob-btn {
+  width: 100%;
+  max-width: 300px;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  margin-bottom: 8px;
+}
+.ob-btn:active { opacity: 0.85; }
+.ob-btn-skip {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px;
+}
 </style>
 </head>
 <body>
 <div class="save-toast" id="save-toast">Progress saved</div>
+
+<!-- ONBOARDING -->
+<div class="onboarding-overlay" id="onboarding">
+  <div class="onboard-card" id="ob-content"></div>
+</div>
 
 <!-- LEARN (Spaced Repetition) -->
 <div class="screen active" id="screen-learn">
@@ -1322,6 +1427,17 @@ function renderSettings() {
     </div>
 
     <div class="setting-group">
+      <h3>Help</h3>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">App Tutorial</div>
+          <div class="setting-desc">Review the intro walkthrough</div>
+        </div>
+        <button class="reset-btn" style="padding:8px 16px;font-size:13px;background:var(--accent2);color:var(--text);" onclick="showTutorial()">Show</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
       <h3>Backup & Restore</h3>
       <div class="setting-row">
         <div>
@@ -1509,9 +1625,96 @@ function importProgress() {
   input.click();
 }
 
+// ===== ONBOARDING =====
+const OB_KEY = 'vulgate_onboarded_v1';
+const obSlides = [
+  {
+    icon: '\u{1F3DB}',
+    title: 'Vulgate Latin',
+    sub: 'Master the 1,000 most common words from the Latin Vulgate Bible',
+    features: null
+  },
+  {
+    icon: '\u{1F4DA}',
+    title: 'How It Works',
+    sub: '',
+    features: [
+      { icon: '\u{1F501}', title: 'Spaced Repetition', desc: 'Cards reappear at optimal intervals. Rate yourself Again, Hard, Good, or Easy.' },
+      { icon: '\u{1F4CB}', title: '50 Sub-Decks', desc: '20 words each, sorted by frequency. Browse freely and tap to reveal meanings.' },
+      { icon: '\u{2753}', title: 'Quiz Mode', desc: 'Four-choice questions. Filter by deck or review only your missed words.' }
+    ]
+  },
+  {
+    icon: '\u{2699}\uFE0F',
+    title: 'Features',
+    sub: '',
+    features: [
+      { icon: '\u{1F50A}', title: 'Sound & Haptics', desc: 'Audio feedback for right and wrong answers. Toggle in Settings.' },
+      { icon: '\u{1F525}', title: 'Daily Streak', desc: 'Keep your streak alive by reviewing every day.' },
+      { icon: '\u{2328}\uFE0F', title: 'Keyboard Shortcuts', desc: 'Space to flip, 1\u20134 to rate. Works on desktop too.' },
+      { icon: '\u{1F4BE}', title: 'Auto-Save & Backup', desc: 'Progress saves automatically. Export/import backups in Settings.' }
+    ]
+  }
+];
+
+let obPage = 0;
+
+function renderOnboarding() {
+  const slide = obSlides[obPage];
+  const isLast = obPage === obSlides.length - 1;
+  const card = document.getElementById('ob-content');
+  let featuresHtml = '';
+  if (slide.features) {
+    featuresHtml = '<div class="ob-features">' + slide.features.map(f =>
+      `<div class="ob-feature">
+        <span class="ob-feat-icon">${f.icon}</span>
+        <div class="ob-feat-text">
+          <h3>${f.title}</h3>
+          <p>${f.desc}</p>
+        </div>
+      </div>`
+    ).join('') + '</div>';
+  }
+  card.innerHTML = `
+    <div class="ob-icon">${slide.icon}</div>
+    <h1>${slide.title}</h1>
+    <p class="ob-sub">${slide.sub}</p>
+    ${featuresHtml}
+    <div class="ob-dots">
+      ${obSlides.map((_, i) => `<div class="ob-dot ${i === obPage ? 'active' : ''}"></div>`).join('')}
+    </div>
+    <button class="ob-btn" onclick="advanceOnboarding()">${isLast ? 'Start Learning' : 'Next'}</button>
+    <button class="ob-btn-skip" onclick="dismissOnboarding()">Skip intro</button>
+  `;
+}
+
+function advanceOnboarding() {
+  obPage++;
+  if (obPage >= obSlides.length) {
+    dismissOnboarding();
+  } else {
+    renderOnboarding();
+  }
+}
+
+function dismissOnboarding() {
+  localStorage.setItem(OB_KEY, '1');
+  document.getElementById('onboarding').classList.add('hidden');
+}
+
+function showTutorial() {
+  obPage = 0;
+  document.getElementById('onboarding').classList.remove('hidden');
+  renderOnboarding();
+}
+
 // ===== INIT =====
-// Set initial milestone marker so we don't fire confetti on load
 lastMilestone = Math.floor(WORDS.filter(w => DATA.cards[w.rank].reps > 0).length / 50) * 50;
+if (!localStorage.getItem(OB_KEY)) {
+  renderOnboarding();
+} else {
+  document.getElementById('onboarding').classList.add('hidden');
+}
 renderLearn();
 </script>
 </body>
