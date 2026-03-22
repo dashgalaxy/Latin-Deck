@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Vulgate Latin Flashcards</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --accent: #e94560;
+  --accent2: #0f3460;
+  --text: #eee;
+  --text-dim: #999;
+  --success: #4ecca3;
+  --fail: #e94560;
+  --gold: #f0c040;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* NAV */
+.nav {
+  display: flex;
+  justify-content: space-around;
+  background: var(--card);
+  padding: 8px 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  border-top: 1px solid #333;
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+.nav button {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px 12px;
+}
+.nav button.active { color: var(--accent); }
+.nav button svg { width: 24px; height: 24px; }
+
+/* SCREENS */
+.screen { display:none; padding: 16px 16px 80px; max-width: 500px; margin: 0 auto; }
+.screen.active { display: block; }
+
+/* HEADER */
+.screen-header {
+  text-align: center;
+  margin-bottom: 16px;
+  padding-top: 8px;
+}
+.screen-header h1 { font-size: 22px; margin-bottom: 4px; }
+.screen-header p { font-size: 13px; color: var(--text-dim); }
+
+/* CARDS */
+.flashcard {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.flashcard:active { transform: scale(0.98); }
+.flashcard .latin { font-size: 40px; font-weight: 700; margin-bottom: 8px; }
+.flashcard .pos { font-size: 14px; color: var(--text-dim); font-style: italic; }
+.flashcard .english { font-size: 22px; color: var(--success); margin-top: 16px; }
+.flashcard .rank-badge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.flashcard .tap-hint {
+  position: absolute;
+  bottom: 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* SR BUTTONS */
+.sr-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  justify-content: center;
+}
+.sr-buttons button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+  max-width: 150px;
+}
+.sr-buttons .btn-again { background: var(--fail); color: #fff; }
+.sr-buttons .btn-hard { background: #e67e22; color: #fff; }
+.sr-buttons .btn-good { background: var(--success); color: #1a1a2e; }
+.sr-buttons .btn-easy { background: var(--gold); color: #1a1a2e; }
+
+/* PROGRESS BAR */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+.progress-bar .fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+/* STATS ROW */
+.stats-row {
+  display: flex;
+  justify-content: space-around;
+  margin: 12px 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.stats-row span b { color: var(--text); }
+
+/* DECK LIST */
+.deck-list { display: flex; flex-direction: column; gap: 10px; }
+.deck-item {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.deck-item:active { background: #1e2d4f; }
+.deck-item .deck-info h3 { font-size: 16px; margin-bottom: 2px; }
+.deck-item .deck-info p { font-size: 12px; color: var(--text-dim); }
+.deck-item .deck-count {
+  background: var(--accent2);
+  color: var(--text);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* BROWSE */
+.word-list { display: flex; flex-direction: column; gap: 6px; }
+.word-row {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.word-row:active { background: #1e2d4f; }
+.word-row .wr-left { display: flex; align-items: baseline; gap: 10px; }
+.word-row .wr-rank { font-size: 11px; color: var(--text-dim); min-width: 28px; }
+.word-row .wr-latin { font-size: 16px; font-weight: 600; }
+.word-row .wr-pos { font-size: 12px; color: var(--text-dim); }
+.word-row .wr-english { font-size: 13px; color: var(--text-dim); display: none; }
+.word-row.revealed .wr-english { display: block; color: var(--success); }
+
+/* QUIZ */
+.quiz-options { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.quiz-option {
+  background: var(--card);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 16px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+.quiz-option:active { transform: scale(0.98); }
+.quiz-option.correct { border-color: var(--success); background: rgba(78,204,163,0.15); }
+.quiz-option.wrong { border-color: var(--fail); background: rgba(233,69,96,0.15); }
+.quiz-option.dimmed { opacity: 0.4; }
+.quiz-next {
+  margin-top: 16px;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  display: none;
+}
+.quiz-score {
+  text-align: center;
+  margin: 10px 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.quiz-score b { color: var(--text); }
+
+/* SETTINGS/STATS */
+.stat-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.stat-card h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 8px; }
+.stat-card .big-num { font-size: 36px; font-weight: 700; }
+.stat-card .sub { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+.reset-btn {
+  background: var(--fail);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.reset-btn:active { opacity: 0.8; }
+.reset-section {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 10px;
+}
+.reset-section h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 10px; }
+.reset-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.reset-row span { font-size: 14px; }
+
+/* BACK BTN */
+.back-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-top: 8px;
+}
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.back-bar h2 { font-size: 18px; }
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-dim);
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state h3 { color: var(--text); margin-bottom: 8px; }
+
+/* QUIZ SOURCE SELECTOR */
+.quiz-source {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.quiz-source button {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid #444;
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.quiz-source button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* SR DONE */
+.sr-done {
+  text-align: center;
+  padding: 40px 20px;
+}
+.sr-done h2 { font-size: 24px; margin-bottom: 8px; color: var(--success); }
+.sr-done p { color: var(--text-dim); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- LEARN (Spaced Repetition) -->
+<div class="screen active" id="screen-learn">
+  <div class="screen-header">
+    <h1>Vulgate Latin</h1>
+    <p>Spaced Repetition</p>
+  </div>
+  <div class="stats-row" id="sr-stats"></div>
+  <div class="progress-bar"><div class="fill" id="sr-progress"></div></div>
+  <div id="sr-card-area"></div>
+</div>
+
+<!-- DECKS (Browse by frequency) -->
+<div class="screen" id="screen-decks">
+  <div class="screen-header">
+    <h1>Sub-Decks</h1>
+    <p>Browse by frequency rank</p>
+  </div>
+  <div class="deck-list" id="deck-list"></div>
+</div>
+
+<!-- BROWSE sub-deck -->
+<div class="screen" id="screen-browse">
+  <div class="back-bar">
+    <button class="back-btn" onclick="showScreen('decks')">&larr; Back</button>
+    <h2 id="browse-title"></h2>
+  </div>
+  <div class="word-list" id="word-list"></div>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="screen-quiz">
+  <div class="screen-header">
+    <h1>Quiz Mode</h1>
+    <p>4-choice multiple choice</p>
+  </div>
+  <div class="quiz-source" id="quiz-source"></div>
+  <div class="quiz-score" id="quiz-score"></div>
+  <div id="quiz-area"></div>
+</div>
+
+<!-- STATS -->
+<div class="screen" id="screen-stats">
+  <div class="screen-header">
+    <h1>Progress</h1>
+  </div>
+  <div id="stats-area"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="active" onclick="showScreen('learn')" id="nav-learn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6.25278V19.2528M12 6.25278C10.8321 5.47686 9.24649 5 7.5 5C5.75351 5 4.16789 5.47686 3 6.25278V19.2528C4.16789 18.4769 5.75351 18 7.5 18C9.24649 18 10.8321 18.4769 12 19.2528M12 6.25278C13.1679 5.47686 14.7535 5 16.5 5C18.2465 5 19.8321 5.47686 21 6.25278V19.2528C19.8321 18.4769 18.2465 18 16.5 18C14.7535 18 13.1679 18.4769 12 19.2528"/></svg>
+    Learn
+  </button>
+  <button onclick="showScreen('decks')" id="nav-decks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Decks
+  </button>
+  <button onclick="showScreen('quiz')" id="nav-quiz">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+    Quiz
+  </button>
+  <button onclick="showScreen('stats')" id="nav-stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    Stats
+  </button>
+</div>
+
+<script>
+const WORDS = [{"rank": 1, "latin": "et", "pos": "conjunction", "english": "and, also, even"}, {"rank": 2, "latin": "in", "pos": "preposition", "english": "in, into, on, among"}, {"rank": 3, "latin": "est", "pos": "verb", "english": "is, exists (3rd sg. pres. of 'sum')"}, {"rank": 4, "latin": "non", "pos": "adverb", "english": "not"}, {"rank": 5, "latin": "qui", "pos": "pronoun/adjective", "english": "who, which, that (relative)"}, {"rank": 6, "latin": "de", "pos": "preposition", "english": "from, about, concerning, down from"}, {"rank": 7, "latin": "ad", "pos": "preposition", "english": "to, toward, near, at"}, {"rank": 8, "latin": "quod", "pos": "conjunction/pronoun", "english": "that, because; which, what"}, {"rank": 9, "latin": "ut", "pos": "conjunction/adverb", "english": "that, so that, as, in order that"}, {"rank": 10, "latin": "cum", "pos": "preposition/conjunction", "english": "with; when, since, although"}, {"rank": 11, "latin": "ex", "pos": "preposition", "english": "out of, from"}, {"rank": 12, "latin": "dominus", "pos": "noun (m.)", "english": "Lord, master"}, {"rank": 13, "latin": "deus", "pos": "noun (m.)", "english": "God"}, {"rank": 14, "latin": "autem", "pos": "conjunction", "english": "but, however, moreover"}, {"rank": 15, "latin": "eius", "pos": "pronoun", "english": "his, her, its (gen. sg. of 'is')"}, {"rank": 16, "latin": "se", "pos": "pronoun", "english": "himself, herself, itself, themselves (reflexive)"}, {"rank": 17, "latin": "enim", "pos": "conjunction", "english": "for, indeed, in fact"}, {"rank": 18, "latin": "a", "pos": "preposition", "english": "from, away from, by"}, {"rank": 19, "latin": "ab", "pos": "preposition", "english": "from, away from, by"}, {"rank": 20, "latin": "ego", "pos": "pronoun", "english": "I"}, {"rank": 21, "latin": "me", "pos": "pronoun", "english": "me (acc./abl. of 'ego')"}, {"rank": 22, "latin": "super", "pos": "preposition/adverb", "english": "above, over, upon, beyond"}, {"rank": 23, "latin": "ait", "pos": "verb", "english": "he/she says, said"}, {"rank": 24, "latin": "dixit", "pos": "verb", "english": "he/she said (perf. of 'dico')"}, {"rank": 25, "latin": "omnis", "pos": "adjective/pronoun", "english": "all, every, each, whole"}, {"rank": 26, "latin": "hic", "pos": "pronoun/adjective", "english": "this, this one; here"}, {"rank": 27, "latin": "ille", "pos": "pronoun/adjective", "english": "that, that one, he/she/it"}, {"rank": 28, "latin": "per", "pos": "preposition", "english": "through, by means of, during"}, {"rank": 29, "latin": "si", "pos": "conjunction", "english": "if"}, {"rank": 30, "latin": "quia", "pos": "conjunction", "english": "because, that, since"}, {"rank": 31, "latin": "filius", "pos": "noun (m.)", "english": "son"}, {"rank": 32, "latin": "rex", "pos": "noun (m.)", "english": "king"}, {"rank": 33, "latin": "terra", "pos": "noun (f.)", "english": "earth, land, ground, country"}, {"rank": 34, "latin": "Israel", "pos": "noun (proper)", "english": "Israel"}, {"rank": 35, "latin": "dico", "pos": "verb", "english": "I say, speak, tell"}, {"rank": 36, "latin": "facio", "pos": "verb", "english": "I make, do, perform"}, {"rank": 37, "latin": "sum", "pos": "verb", "english": "I am, exist"}, {"rank": 38, "latin": "ipse", "pos": "pronoun/adjective", "english": "himself, herself, itself; very, the same"}, {"rank": 39, "latin": "tu", "pos": "pronoun", "english": "you (singular)"}, {"rank": 40, "latin": "te", "pos": "pronoun", "english": "you (acc./abl. sg. of 'tu')"}, {"rank": 41, "latin": "sed", "pos": "conjunction", "english": "but, however"}, {"rank": 42, "latin": "meus", "pos": "adjective/pronoun", "english": "my, mine"}, {"rank": 43, "latin": "tuus", "pos": "adjective/pronoun", "english": "your, yours (singular)"}, {"rank": 44, "latin": "suus", "pos": "adjective/pronoun", "english": "his own, her own, its own, their own"}, {"rank": 45, "latin": "nos", "pos": "pronoun", "english": "we, us"}, {"rank": 46, "latin": "vos", "pos": "pronoun", "english": "you (plural)"}, {"rank": 47, "latin": "quis", "pos": "pronoun", "english": "who? what? (interrogative)"}, {"rank": 48, "latin": "nec", "pos": "conjunction", "english": "and not, nor, neither"}, {"rank": 49, "latin": "neque", "pos": "conjunction", "english": "and not, nor, neither"}, {"rank": 50, "latin": "populus", "pos": "noun (m.)", "english": "people, nation"}, {"rank": 51, "latin": "homo", "pos": "noun (m.)", "english": "man, human being, person"}, {"rank": 52, "latin": "fuit", "pos": "verb", "english": "he/she/it was (perf. of 'sum')"}, {"rank": 53, "latin": "erit", "pos": "verb", "english": "he/she/it will be (fut. of 'sum')"}, {"rank": 54, "latin": "sunt", "pos": "verb", "english": "they are (3rd pl. pres. of 'sum')"}, {"rank": 55, "latin": "erat", "pos": "verb", "english": "he/she/it was (imperf. of 'sum')"}, {"rank": 56, "latin": "hoc", "pos": "pronoun", "english": "this (neut. nom./acc. sg. of 'hic')"}, {"rank": 57, "latin": "quae", "pos": "pronoun", "english": "who, which (fem. sg./neut. pl. of 'qui')"}, {"rank": 58, "latin": "vero", "pos": "adverb/conjunction", "english": "truly, indeed, but, however"}, {"rank": 59, "latin": "sicut", "pos": "conjunction/adverb", "english": "just as, like, as"}, {"rank": 60, "latin": "iam", "pos": "adverb", "english": "now, already, by now"}, {"rank": 61, "latin": "pater", "pos": "noun (m.)", "english": "father"}, {"rank": 62, "latin": "domus", "pos": "noun (f.)", "english": "house, home, household"}, {"rank": 63, "latin": "ante", "pos": "preposition/adverb", "english": "before, in front of"}, {"rank": 64, "latin": "post", "pos": "preposition/adverb", "english": "after, behind"}, {"rank": 65, "latin": "inter", "pos": "preposition", "english": "between, among, during"}, {"rank": 66, "latin": "magnus", "pos": "adjective", "english": "great, large, big, important"}, {"rank": 67, "latin": "vir", "pos": "noun (m.)", "english": "man, husband, hero"}, {"rank": 68, "latin": "verbum", "pos": "noun (n.)", "english": "word"}, {"rank": 69, "latin": "manus", "pos": "noun (f.)", "english": "hand, band (of soldiers)"}, {"rank": 70, "latin": "dies", "pos": "noun (m./f.)", "english": "day"}, {"rank": 71, "latin": "cor", "pos": "noun (n.)", "english": "heart"}, {"rank": 72, "latin": "aqua", "pos": "noun (f.)", "english": "water"}, {"rank": 73, "latin": "spiritus", "pos": "noun (m.)", "english": "spirit, breath, wind"}, {"rank": 74, "latin": "ille", "pos": "pronoun/adjective", "english": "that one, he"}, {"rank": 75, "latin": "Jesus", "pos": "noun (proper)", "english": "Jesus"}, {"rank": 76, "latin": "oculus", "pos": "noun (m.)", "english": "eye"}, {"rank": 77, "latin": "nomen", "pos": "noun (n.)", "english": "name"}, {"rank": 78, "latin": "via", "pos": "noun (f.)", "english": "way, road, path, journey"}, {"rank": 79, "latin": "lex", "pos": "noun (f.)", "english": "law"}, {"rank": 80, "latin": "usque", "pos": "adverb/preposition", "english": "all the way, as far as, until"}, {"rank": 81, "latin": "caelum", "pos": "noun (n.)", "english": "heaven, sky"}, {"rank": 82, "latin": "multus", "pos": "adjective", "english": "much, many"}, {"rank": 83, "latin": "unus", "pos": "adjective/numeral", "english": "one, a single"}, {"rank": 84, "latin": "duo", "pos": "numeral", "english": "two"}, {"rank": 85, "latin": "tres", "pos": "numeral", "english": "three"}, {"rank": 86, "latin": "fecit", "pos": "verb", "english": "he/she/it made, did (perf. of 'facio')"}, {"rank": 87, "latin": "ideo", "pos": "adverb", "english": "therefore, for that reason"}, {"rank": 88, "latin": "sic", "pos": "adverb", "english": "so, thus, in this way"}, {"rank": 89, "latin": "etiam", "pos": "adverb/conjunction", "english": "also, even, still"}, {"rank": 90, "latin": "tamen", "pos": "adverb/conjunction", "english": "nevertheless, however, yet"}, {"rank": 91, "latin": "contra", "pos": "preposition/adverb", "english": "against, opposite, contrary to"}, {"rank": 92, "latin": "ergo", "pos": "conjunction/adverb", "english": "therefore, then, consequently"}, {"rank": 93, "latin": "nihil", "pos": "pronoun/noun (n.)", "english": "nothing"}, {"rank": 94, "latin": "quam", "pos": "adverb/conjunction", "english": "how, how much; than, as"}, {"rank": 95, "latin": "tam", "pos": "adverb", "english": "so, so much, to such a degree"}, {"rank": 96, "latin": "pro", "pos": "preposition", "english": "for, on behalf of, in place of"}, {"rank": 97, "latin": "sine", "pos": "preposition", "english": "without"}, {"rank": 98, "latin": "noster", "pos": "adjective/pronoun", "english": "our, ours"}, {"rank": 99, "latin": "vester", "pos": "adjective/pronoun", "english": "your, yours (plural)"}, {"rank": 100, "latin": "facies", "pos": "noun (f.)", "english": "face, appearance, surface"}, {"rank": 101, "latin": "vox", "pos": "noun (f.)", "english": "voice, sound, word"}, {"rank": 102, "latin": "anima", "pos": "noun (f.)", "english": "soul, spirit, life, breath"}, {"rank": 103, "latin": "caput", "pos": "noun (n.)", "english": "head, top, chief"}, {"rank": 104, "latin": "corpus", "pos": "noun (n.)", "english": "body"}, {"rank": 105, "latin": "sanguis", "pos": "noun (m.)", "english": "blood"}, {"rank": 106, "latin": "mons", "pos": "noun (m.)", "english": "mountain, hill"}, {"rank": 107, "latin": "ignis", "pos": "noun (m.)", "english": "fire"}, {"rank": 108, "latin": "civitas", "pos": "noun (f.)", "english": "city, state, citizenship"}, {"rank": 109, "latin": "gens", "pos": "noun (f.)", "english": "nation, people, race, tribe"}, {"rank": 110, "latin": "tempus", "pos": "noun (n.)", "english": "time, season, occasion"}, {"rank": 111, "latin": "annus", "pos": "noun (m.)", "english": "year"}, {"rank": 112, "latin": "pars", "pos": "noun (f.)", "english": "part, portion, share, side"}, {"rank": 113, "latin": "locus", "pos": "noun (m.)", "english": "place, location, position"}, {"rank": 114, "latin": "bonus", "pos": "adjective", "english": "good"}, {"rank": 115, "latin": "malus", "pos": "adjective", "english": "bad, evil, wicked"}, {"rank": 116, "latin": "primus", "pos": "adjective", "english": "first, foremost"}, {"rank": 117, "latin": "novus", "pos": "adjective", "english": "new, strange, young"}, {"rank": 118, "latin": "sanctus", "pos": "adjective/noun", "english": "holy, sacred; saint"}, {"rank": 119, "latin": "solus", "pos": "adjective", "english": "alone, only, sole"}, {"rank": 120, "latin": "totus", "pos": "adjective", "english": "whole, entire, all"}, {"rank": 121, "latin": "alius", "pos": "adjective/pronoun", "english": "other, another, else"}, {"rank": 122, "latin": "alter", "pos": "adjective/pronoun", "english": "the other (of two), second"}, {"rank": 123, "latin": "nullus", "pos": "adjective/pronoun", "english": "no, none, not any"}, {"rank": 124, "latin": "tantus", "pos": "adjective", "english": "so great, so much, so large"}, {"rank": 125, "latin": "venio", "pos": "verb", "english": "I come, arrive"}, {"rank": 126, "latin": "video", "pos": "verb", "english": "I see, perceive, understand"}, {"rank": 127, "latin": "do", "pos": "verb", "english": "I give, grant, offer"}, {"rank": 128, "latin": "habeo", "pos": "verb", "english": "I have, hold, possess"}, {"rank": 129, "latin": "possum", "pos": "verb", "english": "I am able, I can"}, {"rank": 130, "latin": "volo", "pos": "verb", "english": "I want, wish, am willing"}, {"rank": 131, "latin": "scio", "pos": "verb", "english": "I know, understand"}, {"rank": 132, "latin": "mitto", "pos": "verb", "english": "I send, throw, let go"}, {"rank": 133, "latin": "accipio", "pos": "verb", "english": "I receive, accept, take"}, {"rank": 134, "latin": "pono", "pos": "verb", "english": "I put, place, set"}, {"rank": 135, "latin": "cado", "pos": "verb", "english": "I fall"}, {"rank": 136, "latin": "venit", "pos": "verb", "english": "he/she/it comes/came"}, {"rank": 137, "latin": "vidit", "pos": "verb", "english": "he/she/it saw (perf. of 'video')"}, {"rank": 138, "latin": "dedit", "pos": "verb", "english": "he/she/it gave (perf. of 'do')"}, {"rank": 139, "latin": "loquor", "pos": "verb (deponent)", "english": "I speak, talk, say"}, {"rank": 140, "latin": "respondeo", "pos": "verb", "english": "I answer, reply, respond"}, {"rank": 141, "latin": "scribo", "pos": "verb", "english": "I write"}, {"rank": 142, "latin": "audio", "pos": "verb", "english": "I hear, listen to"}, {"rank": 143, "latin": "tollo", "pos": "verb", "english": "I lift up, raise, take away, remove"}, {"rank": 144, "latin": "sto", "pos": "verb", "english": "I stand, remain, endure"}, {"rank": 145, "latin": "ambulo", "pos": "verb", "english": "I walk"}, {"rank": 146, "latin": "credo", "pos": "verb", "english": "I believe, trust"}, {"rank": 147, "latin": "oro", "pos": "verb", "english": "I pray, beg, plead"}, {"rank": 148, "latin": "timeo", "pos": "verb", "english": "I fear, am afraid"}, {"rank": 149, "latin": "amo", "pos": "verb", "english": "I love"}, {"rank": 150, "latin": "servo", "pos": "verb", "english": "I save, keep, preserve, guard"}, {"rank": 151, "latin": "interficio", "pos": "verb", "english": "I kill, slay, destroy"}, {"rank": 152, "latin": "morior", "pos": "verb (deponent)", "english": "I die"}, {"rank": 153, "latin": "vivo", "pos": "verb", "english": "I live, am alive"}, {"rank": 154, "latin": "judico", "pos": "verb", "english": "I judge, decide, consider"}, {"rank": 155, "latin": "cognosco", "pos": "verb", "english": "I learn, know, recognize"}, {"rank": 156, "latin": "quaero", "pos": "verb", "english": "I seek, ask, inquire"}, {"rank": 157, "latin": "invenio", "pos": "verb", "english": "I find, discover, come upon"}, {"rank": 158, "latin": "duco", "pos": "verb", "english": "I lead, guide, draw"}, {"rank": 159, "latin": "relinquo", "pos": "verb", "english": "I leave behind, abandon, forsake"}, {"rank": 160, "latin": "educo", "pos": "verb", "english": "I lead out, bring up, raise"}, {"rank": 161, "latin": "trado", "pos": "verb", "english": "I hand over, deliver, surrender, betray"}, {"rank": 162, "latin": "sequor", "pos": "verb (deponent)", "english": "I follow, pursue"}, {"rank": 163, "latin": "claudo", "pos": "verb", "english": "I close, shut"}, {"rank": 164, "latin": "aperio", "pos": "verb", "english": "I open, uncover, reveal"}, {"rank": 165, "latin": "peccatum", "pos": "noun (n.)", "english": "sin, fault, error"}, {"rank": 166, "latin": "gratia", "pos": "noun (f.)", "english": "grace, favor, thanks"}, {"rank": 167, "latin": "gloria", "pos": "noun (f.)", "english": "glory, fame, honor"}, {"rank": 168, "latin": "pax", "pos": "noun (f.)", "english": "peace"}, {"rank": 169, "latin": "fides", "pos": "noun (f.)", "english": "faith, trust, loyalty"}, {"rank": 170, "latin": "veritas", "pos": "noun (f.)", "english": "truth"}, {"rank": 171, "latin": "justitia", "pos": "noun (f.)", "english": "justice, righteousness"}, {"rank": 172, "latin": "misericordia", "pos": "noun (f.)", "english": "mercy, compassion, pity"}, {"rank": 173, "latin": "virtus", "pos": "noun (f.)", "english": "virtue, power, strength, courage"}, {"rank": 174, "latin": "salus", "pos": "noun (f.)", "english": "salvation, safety, health"}, {"rank": 175, "latin": "vita", "pos": "noun (f.)", "english": "life"}, {"rank": 176, "latin": "mors", "pos": "noun (f.)", "english": "death"}, {"rank": 177, "latin": "lux", "pos": "noun (f.)", "english": "light"}, {"rank": 178, "latin": "tenebrae", "pos": "noun (f. pl.)", "english": "darkness, shadows"}, {"rank": 179, "latin": "mundus", "pos": "noun (m.)/adjective", "english": "world; clean, elegant"}, {"rank": 180, "latin": "saeculum", "pos": "noun (n.)", "english": "age, generation, world, century"}, {"rank": 181, "latin": "regnum", "pos": "noun (n.)", "english": "kingdom, royal power, reign"}, {"rank": 182, "latin": "sacerdos", "pos": "noun (m.)", "english": "priest"}, {"rank": 183, "latin": "propheta", "pos": "noun (m.)", "english": "prophet"}, {"rank": 184, "latin": "apostolus", "pos": "noun (m.)", "english": "apostle, messenger"}, {"rank": 185, "latin": "discipulus", "pos": "noun (m.)", "english": "disciple, student, follower"}, {"rank": 186, "latin": "servus", "pos": "noun (m.)", "english": "servant, slave"}, {"rank": 187, "latin": "angelus", "pos": "noun (m.)", "english": "angel, messenger"}, {"rank": 188, "latin": "ecclesia", "pos": "noun (f.)", "english": "church, assembly, congregation"}, {"rank": 189, "latin": "testamentum", "pos": "noun (n.)", "english": "covenant, testament, will"}, {"rank": 190, "latin": "altare", "pos": "noun (n.)", "english": "altar"}, {"rank": 191, "latin": "templum", "pos": "noun (n.)", "english": "temple"}, {"rank": 192, "latin": "tabernaculum", "pos": "noun (n.)", "english": "tabernacle, tent, dwelling"}, {"rank": 193, "latin": "Jerusalem", "pos": "noun (proper)", "english": "Jerusalem"}, {"rank": 194, "latin": "Christus", "pos": "noun (proper)", "english": "Christ, the Anointed One"}, {"rank": 195, "latin": "Moses", "pos": "noun (proper)", "english": "Moses"}, {"rank": 196, "latin": "David", "pos": "noun (proper)", "english": "David"}, {"rank": 197, "latin": "Abraham", "pos": "noun (proper)", "english": "Abraham"}, {"rank": 198, "latin": "nunc", "pos": "adverb", "english": "now, at present"}, {"rank": 199, "latin": "tunc", "pos": "adverb", "english": "then, at that time"}, {"rank": 200, "latin": "semper", "pos": "adverb", "english": "always, ever, forever"}, {"rank": 201, "latin": "numquam", "pos": "adverb", "english": "never"}, {"rank": 202, "latin": "saepe", "pos": "adverb", "english": "often"}, {"rank": 203, "latin": "adhuc", "pos": "adverb", "english": "still, yet, thus far"}, {"rank": 204, "latin": "ibi", "pos": "adverb", "english": "there, in that place"}, {"rank": 205, "latin": "hic", "pos": "adverb", "english": "here, in this place"}, {"rank": 206, "latin": "ubi", "pos": "adverb/conjunction", "english": "where, when"}, {"rank": 207, "latin": "unde", "pos": "adverb", "english": "from where, whence, from which"}, {"rank": 208, "latin": "quo", "pos": "adverb", "english": "where (to), whither"}, {"rank": 209, "latin": "quomodo", "pos": "adverb", "english": "how, in what way"}, {"rank": 210, "latin": "cur", "pos": "adverb", "english": "why"}, {"rank": 211, "latin": "quare", "pos": "adverb", "english": "why, for what reason"}, {"rank": 212, "latin": "igitur", "pos": "conjunction/adverb", "english": "therefore, then, accordingly"}, {"rank": 213, "latin": "itaque", "pos": "conjunction", "english": "and so, therefore, accordingly"}, {"rank": 214, "latin": "quidem", "pos": "adverb", "english": "indeed, certainly, at least"}, {"rank": 215, "latin": "ecce", "pos": "interjection", "english": "behold, look, see"}, {"rank": 216, "latin": "amen", "pos": "interjection", "english": "amen, truly, so be it"}, {"rank": 217, "latin": "prae", "pos": "preposition", "english": "before, in front of, because of"}, {"rank": 218, "latin": "sub", "pos": "preposition", "english": "under, beneath, below"}, {"rank": 219, "latin": "trans", "pos": "preposition", "english": "across, beyond, over"}, {"rank": 220, "latin": "propter", "pos": "preposition", "english": "because of, on account of"}, {"rank": 221, "latin": "coram", "pos": "preposition/adverb", "english": "in the presence of, before, face to face"}, {"rank": 222, "latin": "secundum", "pos": "preposition", "english": "according to, along, after"}, {"rank": 223, "latin": "circa", "pos": "preposition/adverb", "english": "around, about, near"}, {"rank": 224, "latin": "Judaea", "pos": "noun (proper)", "english": "Judea"}, {"rank": 225, "latin": "Aegyptus", "pos": "noun (proper)", "english": "Egypt"}, {"rank": 226, "latin": "pes", "pos": "noun (m.)", "english": "foot"}, {"rank": 227, "latin": "os", "pos": "noun (n.)", "english": "mouth, face, opening"}, {"rank": 228, "latin": "auris", "pos": "noun (f.)", "english": "ear"}, {"rank": 229, "latin": "brachium", "pos": "noun (n.)", "english": "arm"}, {"rank": 230, "latin": "dextera", "pos": "noun (f.)/adjective", "english": "right hand, right side"}, {"rank": 231, "latin": "vultus", "pos": "noun (m.)", "english": "face, countenance, expression"}, {"rank": 232, "latin": "caro", "pos": "noun (f.)", "english": "flesh, meat, body"}, {"rank": 233, "latin": "os", "pos": "noun (n.)", "english": "bone (nom./acc. pl. 'ossa')"}, {"rank": 234, "latin": "gladius", "pos": "noun (m.)", "english": "sword"}, {"rank": 235, "latin": "panis", "pos": "noun (m.)", "english": "bread, loaf"}, {"rank": 236, "latin": "vinum", "pos": "noun (n.)", "english": "wine"}, {"rank": 237, "latin": "oleum", "pos": "noun (n.)", "english": "oil, olive oil"}, {"rank": 238, "latin": "vestimentum", "pos": "noun (n.)", "english": "garment, clothing"}, {"rank": 239, "latin": "argentum", "pos": "noun (n.)", "english": "silver, money"}, {"rank": 240, "latin": "aurum", "pos": "noun (n.)", "english": "gold"}, {"rank": 241, "latin": "lignum", "pos": "noun (n.)", "english": "wood, tree, timber"}, {"rank": 242, "latin": "lapis", "pos": "noun (m.)", "english": "stone, rock"}, {"rank": 243, "latin": "ager", "pos": "noun (m.)", "english": "field, farm, land"}, {"rank": 244, "latin": "campus", "pos": "noun (m.)", "english": "plain, field"}, {"rank": 245, "latin": "flumen", "pos": "noun (n.)", "english": "river, stream"}, {"rank": 246, "latin": "mare", "pos": "noun (n.)", "english": "sea"}, {"rank": 247, "latin": "desertum", "pos": "noun (n.)/adjective", "english": "desert, wilderness; deserted"}, {"rank": 248, "latin": "porta", "pos": "noun (f.)", "english": "gate, door, entrance"}, {"rank": 249, "latin": "murus", "pos": "noun (m.)", "english": "wall"}, {"rank": 250, "latin": "urbs", "pos": "noun (f.)", "english": "city"}, {"rank": 251, "latin": "bellum", "pos": "noun (n.)", "english": "war, battle"}, {"rank": 252, "latin": "exercitus", "pos": "noun (m.)", "english": "army"}, {"rank": 253, "latin": "hostis", "pos": "noun (m.)", "english": "enemy, foe"}, {"rank": 254, "latin": "castra", "pos": "noun (n. pl.)", "english": "camp, encampment"}, {"rank": 255, "latin": "opus", "pos": "noun (n.)", "english": "work, deed, labor"}, {"rank": 256, "latin": "consilium", "pos": "noun (n.)", "english": "plan, counsel, advice, assembly"}, {"rank": 257, "latin": "res", "pos": "noun (f.)", "english": "thing, matter, affair, property"}, {"rank": 258, "latin": "causa", "pos": "noun (f.)", "english": "cause, reason, case"}, {"rank": 259, "latin": "genus", "pos": "noun (n.)", "english": "kind, type, race, family, birth"}, {"rank": 260, "latin": "numerus", "pos": "noun (m.)", "english": "number"}, {"rank": 261, "latin": "signum", "pos": "noun (n.)", "english": "sign, signal, seal, miracle"}, {"rank": 262, "latin": "testimonium", "pos": "noun (n.)", "english": "testimony, evidence, witness"}, {"rank": 263, "latin": "mandatum", "pos": "noun (n.)", "english": "command, commandment, order"}, {"rank": 264, "latin": "praeceptum", "pos": "noun (n.)", "english": "precept, rule, command"}, {"rank": 265, "latin": "sacrificium", "pos": "noun (n.)", "english": "sacrifice, offering"}, {"rank": 266, "latin": "holocaustum", "pos": "noun (n.)", "english": "burnt offering, holocaust"}, {"rank": 267, "latin": "oblatio", "pos": "noun (f.)", "english": "offering, oblation"}, {"rank": 268, "latin": "oratio", "pos": "noun (f.)", "english": "prayer, speech, oration"}, {"rank": 269, "latin": "benedictio", "pos": "noun (f.)", "english": "blessing, benediction"}, {"rank": 270, "latin": "maledictio", "pos": "noun (f.)", "english": "curse, malediction"}, {"rank": 271, "latin": "peccator", "pos": "noun (m.)", "english": "sinner"}, {"rank": 272, "latin": "justus", "pos": "adjective/noun", "english": "just, righteous; a just person"}, {"rank": 273, "latin": "impius", "pos": "adjective/noun", "english": "impious, wicked, ungodly"}, {"rank": 274, "latin": "sapiens", "pos": "adjective/noun", "english": "wise; a wise person"}, {"rank": 275, "latin": "stultus", "pos": "adjective/noun", "english": "foolish, stupid; a fool"}, {"rank": 276, "latin": "fortis", "pos": "adjective", "english": "strong, brave, powerful"}, {"rank": 277, "latin": "potens", "pos": "adjective", "english": "powerful, mighty, able"}, {"rank": 278, "latin": "humilis", "pos": "adjective", "english": "humble, lowly, meek"}, {"rank": 279, "latin": "pauper", "pos": "adjective/noun", "english": "poor; a poor person"}, {"rank": 280, "latin": "dives", "pos": "adjective/noun", "english": "rich, wealthy; a rich person"}, {"rank": 281, "latin": "fidelis", "pos": "adjective", "english": "faithful, loyal, trustworthy"}, {"rank": 282, "latin": "verus", "pos": "adjective", "english": "true, real, genuine"}, {"rank": 283, "latin": "aeternus", "pos": "adjective", "english": "eternal, everlasting"}, {"rank": 284, "latin": "caelestis", "pos": "adjective", "english": "heavenly, celestial"}, {"rank": 285, "latin": "terrestris", "pos": "adjective", "english": "earthly, terrestrial"}, {"rank": 286, "latin": "mortalis", "pos": "adjective", "english": "mortal, subject to death"}, {"rank": 287, "latin": "immortalis", "pos": "adjective", "english": "immortal"}, {"rank": 288, "latin": "dignus", "pos": "adjective", "english": "worthy, deserving"}, {"rank": 289, "latin": "indignus", "pos": "adjective", "english": "unworthy, undeserving"}, {"rank": 290, "latin": "similis", "pos": "adjective", "english": "similar, like, resembling"}, {"rank": 291, "latin": "ultimus", "pos": "adjective", "english": "last, final, farthest"}, {"rank": 292, "latin": "medius", "pos": "adjective", "english": "middle, central"}, {"rank": 293, "latin": "summus", "pos": "adjective", "english": "highest, greatest, top"}, {"rank": 294, "latin": "imus", "pos": "adjective", "english": "lowest, bottom, deepest"}, {"rank": 295, "latin": "dexter", "pos": "adjective", "english": "right (hand side)"}, {"rank": 296, "latin": "sinister", "pos": "adjective", "english": "left (hand side)"}, {"rank": 297, "latin": "laetus", "pos": "adjective", "english": "happy, joyful, glad"}, {"rank": 298, "latin": "tristis", "pos": "adjective", "english": "sad, sorrowful, gloomy"}, {"rank": 299, "latin": "pius", "pos": "adjective", "english": "pious, devout, dutiful"}, {"rank": 300, "latin": "mundanus", "pos": "adjective", "english": "worldly, mundane"}, {"rank": 301, "latin": "vobis", "pos": "pronoun", "english": "to/for you (dat./abl. pl. of 'vos')"}, {"rank": 302, "latin": "nobis", "pos": "pronoun", "english": "to/for us (dat./abl. pl. of 'nos')"}, {"rank": 303, "latin": "mihi", "pos": "pronoun", "english": "to/for me (dat. sg. of 'ego')"}, {"rank": 304, "latin": "tibi", "pos": "pronoun", "english": "to/for you (dat. sg. of 'tu')"}, {"rank": 305, "latin": "sibi", "pos": "pronoun", "english": "to/for himself/herself/itself/themselves"}, {"rank": 306, "latin": "eum", "pos": "pronoun", "english": "him (acc. sg. of 'is')"}, {"rank": 307, "latin": "eam", "pos": "pronoun", "english": "her (acc. sg. of 'is')"}, {"rank": 308, "latin": "eos", "pos": "pronoun", "english": "them (acc. m. pl. of 'is')"}, {"rank": 309, "latin": "eas", "pos": "pronoun", "english": "them (acc. f. pl. of 'is')"}, {"rank": 310, "latin": "ei", "pos": "pronoun", "english": "to/for him/her/it (dat. sg. of 'is')"}, {"rank": 311, "latin": "eorum", "pos": "pronoun", "english": "their, of them (gen. m./n. pl. of 'is')"}, {"rank": 312, "latin": "earum", "pos": "pronoun", "english": "their, of them (gen. f. pl. of 'is')"}, {"rank": 313, "latin": "eis", "pos": "pronoun", "english": "to/for them (dat./abl. pl. of 'is')"}, {"rank": 314, "latin": "id", "pos": "pronoun", "english": "it (nom./acc. neut. sg. of 'is')"}, {"rank": 315, "latin": "is", "pos": "pronoun", "english": "he, she, it; this, that"}, {"rank": 316, "latin": "iste", "pos": "pronoun/adjective", "english": "that (near you), such"}, {"rank": 317, "latin": "quid", "pos": "pronoun", "english": "what? (neut. of 'quis')"}, {"rank": 318, "latin": "quibus", "pos": "pronoun", "english": "to/for/by whom/which (dat./abl. pl. of 'qui')"}, {"rank": 319, "latin": "quo", "pos": "pronoun/adverb", "english": "whom/which (abl. sg. of 'qui'); where to"}, {"rank": 320, "latin": "quem", "pos": "pronoun", "english": "whom (acc. m. sg. of 'qui')"}, {"rank": 321, "latin": "cuius", "pos": "pronoun", "english": "whose (gen. sg. of 'qui')"}, {"rank": 322, "latin": "cui", "pos": "pronoun", "english": "to/for whom (dat. sg. of 'qui')"}, {"rank": 323, "latin": "illis", "pos": "pronoun", "english": "to/for those (dat./abl. pl. of 'ille')"}, {"rank": 324, "latin": "illum", "pos": "pronoun", "english": "that one, him (acc. m. sg. of 'ille')"}, {"rank": 325, "latin": "illa", "pos": "pronoun", "english": "that one, she (nom. f. sg. of 'ille')"}, {"rank": 326, "latin": "illud", "pos": "pronoun", "english": "that thing (nom./acc. n. sg. of 'ille')"}, {"rank": 327, "latin": "haec", "pos": "pronoun", "english": "this (f. sg./n. pl. of 'hic')"}, {"rank": 328, "latin": "huius", "pos": "pronoun", "english": "of this (gen. sg. of 'hic')"}, {"rank": 329, "latin": "his", "pos": "pronoun", "english": "to/for these (dat./abl. pl. of 'hic')"}, {"rank": 330, "latin": "hunc", "pos": "pronoun", "english": "this one (acc. m. sg. of 'hic')"}, {"rank": 331, "latin": "hanc", "pos": "pronoun", "english": "this one (acc. f. sg. of 'hic')"}, {"rank": 332, "latin": "nolo", "pos": "verb", "english": "I do not want, am unwilling, refuse"}, {"rank": 333, "latin": "debeo", "pos": "verb", "english": "I owe, ought, must, should"}, {"rank": 334, "latin": "fero", "pos": "verb", "english": "I bear, carry, bring, endure"}, {"rank": 335, "latin": "refero", "pos": "verb", "english": "I bring back, report, reply"}, {"rank": 336, "latin": "offero", "pos": "verb", "english": "I offer, present, sacrifice"}, {"rank": 337, "latin": "aufero", "pos": "verb", "english": "I take away, carry off, remove"}, {"rank": 338, "latin": "infero", "pos": "verb", "english": "I bring in, inflict, wage"}, {"rank": 339, "latin": "eo", "pos": "verb", "english": "I go"}, {"rank": 340, "latin": "exeo", "pos": "verb", "english": "I go out, depart, exit"}, {"rank": 341, "latin": "redeo", "pos": "verb", "english": "I go back, return"}, {"rank": 342, "latin": "abeo", "pos": "verb", "english": "I go away, depart"}, {"rank": 343, "latin": "transeo", "pos": "verb", "english": "I go across, pass over, cross"}, {"rank": 344, "latin": "pereo", "pos": "verb", "english": "I perish, am lost, die"}, {"rank": 345, "latin": "adeo", "pos": "verb/adverb", "english": "I go to, approach; to such a degree"}, {"rank": 346, "latin": "introeo", "pos": "verb", "english": "I enter, go into"}, {"rank": 347, "latin": "nascor", "pos": "verb (deponent)", "english": "I am born"}, {"rank": 348, "latin": "patior", "pos": "verb (deponent)", "english": "I suffer, endure, allow"}, {"rank": 349, "latin": "utor", "pos": "verb (deponent)", "english": "I use, employ"}, {"rank": 350, "latin": "proficiscor", "pos": "verb (deponent)", "english": "I set out, depart, travel"}, {"rank": 351, "latin": "revertor", "pos": "verb (deponent)", "english": "I return, come back"}, {"rank": 352, "latin": "laetor", "pos": "verb (deponent)", "english": "I rejoice, am glad"}, {"rank": 353, "latin": "confiteor", "pos": "verb (deponent)", "english": "I confess, acknowledge, praise"}, {"rank": 354, "latin": "obliviscor", "pos": "verb (deponent)", "english": "I forget"}, {"rank": 355, "latin": "precor", "pos": "verb (deponent)", "english": "I pray, beseech, entreat"}, {"rank": 356, "latin": "misereor", "pos": "verb (deponent)", "english": "I have mercy on, pity"}, {"rank": 357, "latin": "recordor", "pos": "verb (deponent)", "english": "I remember, recall"}, {"rank": 358, "latin": "amplector", "pos": "verb (deponent)", "english": "I embrace, cherish"}, {"rank": 359, "latin": "comitor", "pos": "verb (deponent)", "english": "I accompany, attend"}, {"rank": 360, "latin": "ulciscor", "pos": "verb (deponent)", "english": "I avenge, take vengeance"}, {"rank": 361, "latin": "fungor", "pos": "verb (deponent)", "english": "I perform, discharge, complete"}, {"rank": 362, "latin": "fruor", "pos": "verb (deponent)", "english": "I enjoy, delight in"}, {"rank": 363, "latin": "polliceor", "pos": "verb (deponent)", "english": "I promise, offer"}, {"rank": 364, "latin": "ago", "pos": "verb", "english": "I do, drive, act, conduct, lead"}, {"rank": 365, "latin": "cogo", "pos": "verb", "english": "I compel, force, gather"}, {"rank": 366, "latin": "gero", "pos": "verb", "english": "I bear, carry on, wage, manage"}, {"rank": 367, "latin": "rego", "pos": "verb", "english": "I rule, guide, direct"}, {"rank": 368, "latin": "lego", "pos": "verb", "english": "I read, choose, gather"}, {"rank": 369, "latin": "clamo", "pos": "verb", "english": "I shout, cry out, proclaim"}, {"rank": 370, "latin": "voco", "pos": "verb", "english": "I call, summon, name"}, {"rank": 371, "latin": "rogo", "pos": "verb", "english": "I ask, request"}, {"rank": 372, "latin": "narro", "pos": "verb", "english": "I tell, narrate, relate"}, {"rank": 373, "latin": "doceo", "pos": "verb", "english": "I teach, instruct"}, {"rank": 374, "latin": "moneo", "pos": "verb", "english": "I warn, advise, remind"}, {"rank": 375, "latin": "jubeo", "pos": "verb", "english": "I order, command"}, {"rank": 376, "latin": "veto", "pos": "verb", "english": "I forbid, prohibit"}, {"rank": 377, "latin": "sino", "pos": "verb", "english": "I allow, permit"}, {"rank": 378, "latin": "coepi", "pos": "verb (defective)", "english": "I began"}, {"rank": 379, "latin": "desino", "pos": "verb", "english": "I cease, stop, leave off"}, {"rank": 380, "latin": "incipium", "pos": "noun (n.)", "english": "beginning"}, {"rank": 381, "latin": "incipio", "pos": "verb", "english": "I begin, start, undertake"}, {"rank": 382, "latin": "perficio", "pos": "verb", "english": "I complete, accomplish, finish"}, {"rank": 383, "latin": "aedifico", "pos": "verb", "english": "I build, construct, edify"}, {"rank": 384, "latin": "destruo", "pos": "verb", "english": "I destroy, tear down"}, {"rank": 385, "latin": "constituo", "pos": "verb", "english": "I establish, set up, decide"}, {"rank": 386, "latin": "instituo", "pos": "verb", "english": "I establish, set up, train"}, {"rank": 387, "latin": "restituo", "pos": "verb", "english": "I restore, rebuild, give back"}, {"rank": 388, "latin": "tribuo", "pos": "verb", "english": "I assign, grant, bestow"}, {"rank": 389, "latin": "distribuo", "pos": "verb", "english": "I distribute, divide, assign"}, {"rank": 390, "latin": "retribuo", "pos": "verb", "english": "I repay, reward, give back"}, {"rank": 391, "latin": "attribuo", "pos": "verb", "english": "I assign, attribute, grant"}, {"rank": 392, "latin": "pecunia", "pos": "noun (f.)", "english": "money, wealth"}, {"rank": 393, "latin": "navis", "pos": "noun (f.)", "english": "ship, vessel"}, {"rank": 394, "latin": "terra", "pos": "noun (f.)", "english": "earth, land"}, {"rank": 395, "latin": "silva", "pos": "noun (f.)", "english": "forest, wood, woodland"}, {"rank": 396, "latin": "arbor", "pos": "noun (f.)", "english": "tree"}, {"rank": 397, "latin": "fructus", "pos": "noun (m.)", "english": "fruit, produce, profit, enjoyment"}, {"rank": 398, "latin": "semen", "pos": "noun (n.)", "english": "seed, offspring"}, {"rank": 399, "latin": "granum", "pos": "noun (n.)", "english": "grain, seed"}, {"rank": 400, "latin": "herba", "pos": "noun (f.)", "english": "herb, grass, plant"}, {"rank": 401, "latin": "flos", "pos": "noun (m.)", "english": "flower, blossom"}, {"rank": 402, "latin": "radix", "pos": "noun (f.)", "english": "root, foundation, origin"}, {"rank": 403, "latin": "frumentum", "pos": "noun (n.)", "english": "grain, wheat, corn"}, {"rank": 404, "latin": "ovis", "pos": "noun (f.)", "english": "sheep"}, {"rank": 405, "latin": "bos", "pos": "noun (m./f.)", "english": "ox, cow, cattle"}, {"rank": 406, "latin": "agnus", "pos": "noun (m.)", "english": "lamb"}, {"rank": 407, "latin": "leo", "pos": "noun (m.)", "english": "lion"}, {"rank": 408, "latin": "serpens", "pos": "noun (m./f.)", "english": "serpent, snake"}, {"rank": 409, "latin": "avis", "pos": "noun (f.)", "english": "bird"}, {"rank": 410, "latin": "piscis", "pos": "noun (m.)", "english": "fish"}, {"rank": 411, "latin": "asinus", "pos": "noun (m.)", "english": "donkey, ass"}, {"rank": 412, "latin": "equus", "pos": "noun (m.)", "english": "horse"}, {"rank": 413, "latin": "camelus", "pos": "noun (m.)", "english": "camel"}, {"rank": 414, "latin": "lupus", "pos": "noun (m.)", "english": "wolf"}, {"rank": 415, "latin": "columba", "pos": "noun (f.)", "english": "dove, pigeon"}, {"rank": 416, "latin": "frater", "pos": "noun (m.)", "english": "brother"}, {"rank": 417, "latin": "soror", "pos": "noun (f.)", "english": "sister"}, {"rank": 418, "latin": "mater", "pos": "noun (f.)", "english": "mother"}, {"rank": 419, "latin": "uxor", "pos": "noun (f.)", "english": "wife"}, {"rank": 420, "latin": "maritus", "pos": "noun (m.)", "english": "husband"}, {"rank": 421, "latin": "filia", "pos": "noun (f.)", "english": "daughter"}, {"rank": 422, "latin": "infans", "pos": "noun (m./f.)", "english": "infant, child, baby"}, {"rank": 423, "latin": "puer", "pos": "noun (m.)", "english": "boy, child"}, {"rank": 424, "latin": "puella", "pos": "noun (f.)", "english": "girl"}, {"rank": 425, "latin": "virgo", "pos": "noun (f.)", "english": "virgin, maiden"}, {"rank": 426, "latin": "vidua", "pos": "noun (f.)", "english": "widow"}, {"rank": 427, "latin": "orphanus", "pos": "noun (m.)", "english": "orphan"}, {"rank": 428, "latin": "senex", "pos": "noun/adjective", "english": "old man; old, aged"}, {"rank": 429, "latin": "juvenis", "pos": "noun/adjective", "english": "young person; young"}, {"rank": 430, "latin": "amicus", "pos": "noun (m.)", "english": "friend"}, {"rank": 431, "latin": "inimicus", "pos": "noun (m.)/adjective", "english": "enemy; hostile, unfriendly"}, {"rank": 432, "latin": "proximus", "pos": "noun (m.)/adjective", "english": "neighbor; nearest, next"}, {"rank": 433, "latin": "peregrinus", "pos": "noun (m.)/adjective", "english": "stranger, foreigner; foreign"}, {"rank": 434, "latin": "civis", "pos": "noun (m./f.)", "english": "citizen"}, {"rank": 435, "latin": "judex", "pos": "noun (m.)", "english": "judge"}, {"rank": 436, "latin": "testis", "pos": "noun (m.)", "english": "witness"}, {"rank": 437, "latin": "minister", "pos": "noun (m.)", "english": "servant, minister, attendant"}, {"rank": 438, "latin": "magister", "pos": "noun (m.)", "english": "master, teacher"}, {"rank": 439, "latin": "doctor", "pos": "noun (m.)", "english": "teacher, doctor, instructor"}, {"rank": 440, "latin": "dux", "pos": "noun (m.)", "english": "leader, general, guide"}, {"rank": 441, "latin": "princeps", "pos": "noun (m.)", "english": "prince, chief, leader, first"}, {"rank": 442, "latin": "imperator", "pos": "noun (m.)", "english": "commander, emperor"}, {"rank": 443, "latin": "Caesar", "pos": "noun (proper)", "english": "Caesar"}, {"rank": 444, "latin": "pontifex", "pos": "noun (m.)", "english": "high priest, pontiff"}, {"rank": 445, "latin": "levita", "pos": "noun (m.)", "english": "Levite"}, {"rank": 446, "latin": "scriba", "pos": "noun (m.)", "english": "scribe"}, {"rank": 447, "latin": "Pharisaeus", "pos": "noun (proper)", "english": "Pharisee"}, {"rank": 448, "latin": "Sadducaeus", "pos": "noun (proper)", "english": "Sadducee"}, {"rank": 449, "latin": "publicanus", "pos": "noun (m.)", "english": "tax collector, publican"}, {"rank": 450, "latin": "centurio", "pos": "noun (m.)", "english": "centurion"}, {"rank": 451, "latin": "Petrus", "pos": "noun (proper)", "english": "Peter"}, {"rank": 452, "latin": "Paulus", "pos": "noun (proper)", "english": "Paul"}, {"rank": 453, "latin": "Johannes", "pos": "noun (proper)", "english": "John"}, {"rank": 454, "latin": "Maria", "pos": "noun (proper)", "english": "Mary"}, {"rank": 455, "latin": "Jacobus", "pos": "noun (proper)", "english": "James"}, {"rank": 456, "latin": "Simon", "pos": "noun (proper)", "english": "Simon"}, {"rank": 457, "latin": "Judas", "pos": "noun (proper)", "english": "Judas"}, {"rank": 458, "latin": "Pilatus", "pos": "noun (proper)", "english": "Pilate"}, {"rank": 459, "latin": "Herodes", "pos": "noun (proper)", "english": "Herod"}, {"rank": 460, "latin": "Satan", "pos": "noun (proper)", "english": "Satan"}, {"rank": 461, "latin": "diabolus", "pos": "noun (m.)", "english": "devil"}, {"rank": 462, "latin": "daemon", "pos": "noun (m./n.)", "english": "demon, evil spirit"}, {"rank": 463, "latin": "coelum", "pos": "noun (n.)", "english": "heaven, sky (variant of 'caelum')"}, {"rank": 464, "latin": "infernus", "pos": "noun (m.)/adjective", "english": "hell, underworld; lower"}, {"rank": 465, "latin": "paradisus", "pos": "noun (m.)", "english": "paradise"}, {"rank": 466, "latin": "sepulcrum", "pos": "noun (n.)", "english": "tomb, grave, sepulcher"}, {"rank": 467, "latin": "crux", "pos": "noun (f.)", "english": "cross"}, {"rank": 468, "latin": "resurrectio", "pos": "noun (f.)", "english": "resurrection"}, {"rank": 469, "latin": "baptisma", "pos": "noun (n.)", "english": "baptism"}, {"rank": 470, "latin": "eucharistia", "pos": "noun (f.)", "english": "Eucharist, thanksgiving"}, {"rank": 471, "latin": "evangelium", "pos": "noun (n.)", "english": "gospel, good news"}, {"rank": 472, "latin": "parabola", "pos": "noun (f.)", "english": "parable, comparison"}, {"rank": 473, "latin": "mysterium", "pos": "noun (n.)", "english": "mystery, secret rite"}, {"rank": 474, "latin": "sacramentum", "pos": "noun (n.)", "english": "sacrament, mystery, oath"}, {"rank": 475, "latin": "promissio", "pos": "noun (f.)", "english": "promise"}, {"rank": 476, "latin": "redemptio", "pos": "noun (f.)", "english": "redemption, ransom"}, {"rank": 477, "latin": "remissio", "pos": "noun (f.)", "english": "forgiveness, remission, release"}, {"rank": 478, "latin": "conversio", "pos": "noun (f.)", "english": "conversion, turning"}, {"rank": 479, "latin": "tentatio", "pos": "noun (f.)", "english": "temptation, trial, testing"}, {"rank": 480, "latin": "tribulatio", "pos": "noun (f.)", "english": "tribulation, affliction, distress"}, {"rank": 481, "latin": "persecutio", "pos": "noun (f.)", "english": "persecution"}, {"rank": 482, "latin": "consolatio", "pos": "noun (f.)", "english": "consolation, comfort, encouragement"}, {"rank": 483, "latin": "praedicatio", "pos": "noun (f.)", "english": "preaching, proclamation"}, {"rank": 484, "latin": "confessio", "pos": "noun (f.)", "english": "confession, acknowledgment, praise"}, {"rank": 485, "latin": "laudo", "pos": "verb", "english": "I praise, commend, approve"}, {"rank": 486, "latin": "canto", "pos": "verb", "english": "I sing, chant"}, {"rank": 487, "latin": "psallo", "pos": "verb", "english": "I sing psalms, play the harp"}, {"rank": 488, "latin": "adoro", "pos": "verb", "english": "I worship, adore, honor"}, {"rank": 489, "latin": "benedico", "pos": "verb", "english": "I bless, speak well of"}, {"rank": 490, "latin": "maledico", "pos": "verb", "english": "I curse, speak evil of"}, {"rank": 491, "latin": "sano", "pos": "verb", "english": "I heal, cure, make whole"}, {"rank": 492, "latin": "curo", "pos": "verb", "english": "I care for, heal, attend to"}, {"rank": 493, "latin": "libero", "pos": "verb", "english": "I free, liberate, release"}, {"rank": 494, "latin": "salvo", "pos": "verb", "english": "I save, deliver, preserve"}, {"rank": 495, "latin": "redimo", "pos": "verb", "english": "I redeem, buy back, ransom"}, {"rank": 496, "latin": "purgo", "pos": "verb", "english": "I cleanse, purify"}, {"rank": 497, "latin": "sanctifico", "pos": "verb", "english": "I sanctify, make holy"}, {"rank": 498, "latin": "justifico", "pos": "verb", "english": "I justify, make righteous"}, {"rank": 499, "latin": "glorifico", "pos": "verb", "english": "I glorify, honor"}, {"rank": 500, "latin": "magnifico", "pos": "verb", "english": "I magnify, extol, glorify"}, {"rank": 501, "latin": "humilio", "pos": "verb", "english": "I humble, humiliate"}, {"rank": 502, "latin": "exalto", "pos": "verb", "english": "I exalt, raise up"}, {"rank": 503, "latin": "suscipio", "pos": "verb", "english": "I take up, receive, undertake"}, {"rank": 504, "latin": "recipio", "pos": "verb", "english": "I receive, take back, recover"}, {"rank": 505, "latin": "percipio", "pos": "verb", "english": "I perceive, receive, obtain"}, {"rank": 506, "latin": "concipio", "pos": "verb", "english": "I conceive, take in, devise"}, {"rank": 507, "latin": "praecipum", "pos": "noun (n.)", "english": "chief part, beginning"}, {"rank": 508, "latin": "surgo", "pos": "verb", "english": "I rise, get up, stand up"}, {"rank": 509, "latin": "resurgo", "pos": "verb", "english": "I rise again"}, {"rank": 510, "latin": "ascendo", "pos": "verb", "english": "I ascend, climb, go up"}, {"rank": 511, "latin": "descendo", "pos": "verb", "english": "I descend, come down, go down"}, {"rank": 512, "latin": "sedeo", "pos": "verb", "english": "I sit"}, {"rank": 513, "latin": "jaceo", "pos": "verb", "english": "I lie (down), recline"}, {"rank": 514, "latin": "dormio", "pos": "verb", "english": "I sleep"}, {"rank": 515, "latin": "vigilo", "pos": "verb", "english": "I watch, keep awake, am vigilant"}, {"rank": 516, "latin": "bibo", "pos": "verb", "english": "I drink"}, {"rank": 517, "latin": "edo", "pos": "verb", "english": "I eat"}, {"rank": 518, "latin": "comedo", "pos": "verb", "english": "I eat, consume, devour"}, {"rank": 519, "latin": "jejuno", "pos": "verb", "english": "I fast, abstain from food"}, {"rank": 520, "latin": "flecto", "pos": "verb", "english": "I bend, curve, bow"}, {"rank": 521, "latin": "genuo", "pos": "verb", "english": "I beget, produce"}, {"rank": 522, "latin": "gaudeo", "pos": "verb", "english": "I rejoice, am glad"}, {"rank": 523, "latin": "doleo", "pos": "verb", "english": "I grieve, suffer, am in pain"}, {"rank": 524, "latin": "fleo", "pos": "verb", "english": "I weep, cry"}, {"rank": 525, "latin": "plango", "pos": "verb", "english": "I mourn, lament, beat (breast)"}, {"rank": 526, "latin": "rideo", "pos": "verb", "english": "I laugh, smile"}, {"rank": 527, "latin": "spero", "pos": "verb", "english": "I hope, expect"}, {"rank": 528, "latin": "despero", "pos": "verb", "english": "I despair, give up hope"}, {"rank": 529, "latin": "confido", "pos": "verb", "english": "I trust, have confidence in"}, {"rank": 530, "latin": "dubito", "pos": "verb", "english": "I doubt, hesitate"}, {"rank": 531, "latin": "puto", "pos": "verb", "english": "I think, consider, reckon"}, {"rank": 532, "latin": "existimo", "pos": "verb", "english": "I judge, consider, think"}, {"rank": 533, "latin": "arbitror", "pos": "verb (deponent)", "english": "I think, judge, believe"}, {"rank": 534, "latin": "opinor", "pos": "verb (deponent)", "english": "I suppose, think, believe"}, {"rank": 535, "latin": "sentio", "pos": "verb", "english": "I feel, perceive, think"}, {"rank": 536, "latin": "intellego", "pos": "verb", "english": "I understand, perceive, comprehend"}, {"rank": 537, "latin": "sapio", "pos": "verb", "english": "I taste, am wise, have sense"}, {"rank": 538, "latin": "memor", "pos": "adjective", "english": "mindful, remembering"}, {"rank": 539, "latin": "memini", "pos": "verb (defective)", "english": "I remember"}, {"rank": 540, "latin": "nosco", "pos": "verb", "english": "I come to know, learn"}, {"rank": 541, "latin": "agnosco", "pos": "verb", "english": "I recognize, acknowledge"}, {"rank": 542, "latin": "ignosco", "pos": "verb", "english": "I forgive, pardon"}, {"rank": 543, "latin": "nescio", "pos": "verb", "english": "I do not know, am ignorant"}, {"rank": 544, "latin": "disco", "pos": "verb", "english": "I learn"}, {"rank": 545, "latin": "doceo", "pos": "verb", "english": "I teach"}, {"rank": 546, "latin": "studeo", "pos": "verb", "english": "I am eager, devote myself to"}, {"rank": 547, "latin": "curo", "pos": "verb", "english": "I care for, attend to"}, {"rank": 548, "latin": "diligo", "pos": "verb", "english": "I love, esteem, value"}, {"rank": 549, "latin": "odio", "pos": "verb", "english": "I hate"}, {"rank": 550, "latin": "contemno", "pos": "verb", "english": "I despise, scorn"}, {"rank": 551, "latin": "neglego", "pos": "verb", "english": "I neglect, disregard"}, {"rank": 552, "latin": "parco", "pos": "verb", "english": "I spare, show mercy to"}, {"rank": 553, "latin": "punio", "pos": "verb", "english": "I punish"}, {"rank": 554, "latin": "castigo", "pos": "verb", "english": "I correct, chastise, punish"}, {"rank": 555, "latin": "corrigo", "pos": "verb", "english": "I correct, set right, reform"}, {"rank": 556, "latin": "emendo", "pos": "verb", "english": "I correct, amend, improve"}, {"rank": 557, "latin": "pecco", "pos": "verb", "english": "I sin, err, do wrong"}, {"rank": 558, "latin": "erro", "pos": "verb", "english": "I wander, err, am mistaken"}, {"rank": 559, "latin": "fallo", "pos": "verb", "english": "I deceive, trick, fail"}, {"rank": 560, "latin": "mentior", "pos": "verb (deponent)", "english": "I lie, speak falsely"}, {"rank": 561, "latin": "juro", "pos": "verb", "english": "I swear, take an oath"}, {"rank": 562, "latin": "promitto", "pos": "verb", "english": "I promise, send forth"}, {"rank": 563, "latin": "spondeo", "pos": "verb", "english": "I pledge, promise, vow"}, {"rank": 564, "latin": "voveo", "pos": "verb", "english": "I vow, dedicate, devote"}, {"rank": 565, "latin": "consecro", "pos": "verb", "english": "I consecrate, dedicate"}, {"rank": 566, "latin": "sacrifico", "pos": "verb", "english": "I sacrifice"}, {"rank": 567, "latin": "immolo", "pos": "verb", "english": "I sacrifice, immolate"}, {"rank": 568, "latin": "sufficio", "pos": "verb", "english": "I suffice, am enough"}, {"rank": 569, "latin": "abundo", "pos": "verb", "english": "I abound, overflow, am rich in"}, {"rank": 570, "latin": "deficio", "pos": "verb", "english": "I fail, fall short, desert"}, {"rank": 571, "latin": "perdo", "pos": "verb", "english": "I destroy, lose, ruin, waste"}, {"rank": 572, "latin": "servo", "pos": "verb", "english": "I save, preserve, keep, guard"}, {"rank": 573, "latin": "conservo", "pos": "verb", "english": "I preserve, keep safe"}, {"rank": 574, "latin": "custodio", "pos": "verb", "english": "I guard, watch, keep"}, {"rank": 575, "latin": "protego", "pos": "verb", "english": "I protect, cover, shield"}, {"rank": 576, "latin": "defendo", "pos": "verb", "english": "I defend, ward off, protect"}, {"rank": 577, "latin": "expugno", "pos": "verb", "english": "I conquer, capture by storm"}, {"rank": 578, "latin": "oppugno", "pos": "verb", "english": "I attack, assault, besiege"}, {"rank": 579, "latin": "pugno", "pos": "verb", "english": "I fight"}, {"rank": 580, "latin": "vinco", "pos": "verb", "english": "I conquer, overcome, defeat"}, {"rank": 581, "latin": "supero", "pos": "verb", "english": "I overcome, surpass, conquer"}, {"rank": 582, "latin": "fugio", "pos": "verb", "english": "I flee, run away, escape"}, {"rank": 583, "latin": "persequor", "pos": "verb (deponent)", "english": "I pursue, follow, persecute"}, {"rank": 584, "latin": "capio", "pos": "verb", "english": "I take, capture, seize"}, {"rank": 585, "latin": "rapio", "pos": "verb", "english": "I seize, snatch, carry off"}, {"rank": 586, "latin": "teneo", "pos": "verb", "english": "I hold, keep, possess"}, {"rank": 587, "latin": "retineo", "pos": "verb", "english": "I hold back, retain, keep"}, {"rank": 588, "latin": "contineo", "pos": "verb", "english": "I contain, hold together, restrain"}, {"rank": 589, "latin": "obtineo", "pos": "verb", "english": "I hold, maintain, obtain"}, {"rank": 590, "latin": "sustineo", "pos": "verb", "english": "I sustain, support, endure"}, {"rank": 591, "latin": "abstineo", "pos": "verb", "english": "I refrain from, abstain"}, {"rank": 592, "latin": "pareo", "pos": "verb", "english": "I obey, am visible, appear"}, {"rank": 593, "latin": "appareo", "pos": "verb", "english": "I appear, am visible"}, {"rank": 594, "latin": "compareo", "pos": "verb", "english": "I appear, am present"}, {"rank": 595, "latin": "praeparo", "pos": "verb", "english": "I prepare, make ready"}, {"rank": 596, "latin": "paro", "pos": "verb", "english": "I prepare, provide, get ready"}, {"rank": 597, "latin": "instruo", "pos": "verb", "english": "I build, arrange, equip"}, {"rank": 598, "latin": "orno", "pos": "verb", "english": "I equip, furnish, adorn"}, {"rank": 599, "latin": "tego", "pos": "verb", "english": "I cover, hide, protect"}, {"rank": 600, "latin": "operio", "pos": "verb", "english": "I cover, hide, shut"}, {"rank": 601, "latin": "revelo", "pos": "verb", "english": "I reveal, uncover, disclose"}, {"rank": 602, "latin": "abscondo", "pos": "verb", "english": "I hide, conceal"}, {"rank": 603, "latin": "occulto", "pos": "verb", "english": "I hide, conceal, keep secret"}, {"rank": 604, "latin": "manifesto", "pos": "verb/adverb", "english": "I reveal, make clear; openly"}, {"rank": 605, "latin": "demonstro", "pos": "verb", "english": "I show, point out, demonstrate"}, {"rank": 606, "latin": "ostendo", "pos": "verb", "english": "I show, display, reveal"}, {"rank": 607, "latin": "indico", "pos": "verb", "english": "I point out, show, declare"}, {"rank": 608, "latin": "nuntio", "pos": "verb", "english": "I announce, report, declare"}, {"rank": 609, "latin": "annuntio", "pos": "verb", "english": "I announce, proclaim"}, {"rank": 610, "latin": "praedico", "pos": "verb", "english": "I proclaim, preach, foretell"}, {"rank": 611, "latin": "evangelizo", "pos": "verb", "english": "I preach the gospel, evangelize"}, {"rank": 612, "latin": "prophetizo", "pos": "verb", "english": "I prophesy"}, {"rank": 613, "latin": "baptizo", "pos": "verb", "english": "I baptize"}, {"rank": 614, "latin": "compleo", "pos": "verb", "english": "I fill, complete, fulfill"}, {"rank": 615, "latin": "impleo", "pos": "verb", "english": "I fill, fulfill, complete"}, {"rank": 616, "latin": "repleo", "pos": "verb", "english": "I fill again, fill up, satisfy"}, {"rank": 617, "latin": "expleo", "pos": "verb", "english": "I fill up, satisfy, complete"}, {"rank": 618, "latin": "vacuo", "pos": "verb", "english": "I empty, make void"}, {"rank": 619, "latin": "habito", "pos": "verb", "english": "I dwell, live, inhabit"}, {"rank": 620, "latin": "maneo", "pos": "verb", "english": "I remain, stay, abide"}, {"rank": 621, "latin": "permaneo", "pos": "verb", "english": "I remain, continue, persist"}, {"rank": 622, "latin": "migro", "pos": "verb", "english": "I depart, migrate, move"}, {"rank": 623, "latin": "muto", "pos": "verb", "english": "I change, alter, exchange"}, {"rank": 624, "latin": "converto", "pos": "verb", "english": "I turn around, convert, change"}, {"rank": 625, "latin": "verto", "pos": "verb", "english": "I turn, change, transform"}, {"rank": 626, "latin": "reverto", "pos": "verb", "english": "I turn back, return"}, {"rank": 627, "latin": "creo", "pos": "verb", "english": "I create, make, produce"}, {"rank": 628, "latin": "formo", "pos": "verb", "english": "I form, shape, fashion"}, {"rank": 629, "latin": "fingo", "pos": "verb", "english": "I form, shape, invent, pretend"}, {"rank": 630, "latin": "genero", "pos": "verb", "english": "I beget, produce, generate"}, {"rank": 631, "latin": "gigno", "pos": "verb", "english": "I beget, give birth to, produce"}, {"rank": 632, "latin": "pario", "pos": "verb", "english": "I give birth to, produce"}, {"rank": 633, "latin": "nutrio", "pos": "verb", "english": "I nourish, feed, bring up"}, {"rank": 634, "latin": "alo", "pos": "verb", "english": "I nourish, feed, sustain"}, {"rank": 635, "latin": "pasco", "pos": "verb", "english": "I feed, tend, pasture"}, {"rank": 636, "latin": "bene", "pos": "adverb", "english": "well, rightly, favorably"}, {"rank": 637, "latin": "male", "pos": "adverb", "english": "badly, wrongly, wickedly"}, {"rank": 638, "latin": "valde", "pos": "adverb", "english": "very, greatly, strongly, exceedingly"}, {"rank": 639, "latin": "nimis", "pos": "adverb", "english": "too much, very much, exceedingly"}, {"rank": 640, "latin": "satis", "pos": "adverb/adjective", "english": "enough, sufficiently"}, {"rank": 641, "latin": "parum", "pos": "adverb", "english": "too little, not enough"}, {"rank": 642, "latin": "plus", "pos": "adverb/noun", "english": "more; a greater amount"}, {"rank": 643, "latin": "minus", "pos": "adverb/noun", "english": "less; a lesser amount"}, {"rank": 644, "latin": "magis", "pos": "adverb", "english": "more, rather, to a greater degree"}, {"rank": 645, "latin": "maxime", "pos": "adverb", "english": "most, especially, very greatly"}, {"rank": 646, "latin": "minime", "pos": "adverb", "english": "least, not at all, by no means"}, {"rank": 647, "latin": "solum", "pos": "adverb", "english": "only, merely"}, {"rank": 648, "latin": "tantum", "pos": "adverb", "english": "only, so much"}, {"rank": 649, "latin": "modo", "pos": "adverb", "english": "only, just now, in a certain way"}, {"rank": 650, "latin": "forte", "pos": "adverb", "english": "by chance, perhaps"}, {"rank": 651, "latin": "forsitan", "pos": "adverb", "english": "perhaps, possibly"}, {"rank": 652, "latin": "certe", "pos": "adverb", "english": "certainly, surely, at least"}, {"rank": 653, "latin": "profecto", "pos": "adverb", "english": "surely, indeed, certainly"}, {"rank": 654, "latin": "plane", "pos": "adverb", "english": "clearly, plainly, entirely"}, {"rank": 655, "latin": "omnino", "pos": "adverb", "english": "altogether, entirely, at all"}, {"rank": 656, "latin": "praesertim", "pos": "adverb", "english": "especially, particularly"}, {"rank": 657, "latin": "praecipue", "pos": "adverb", "english": "especially, chiefly, particularly"}, {"rank": 658, "latin": "statim", "pos": "adverb", "english": "immediately, at once"}, {"rank": 659, "latin": "protinus", "pos": "adverb", "english": "immediately, continuously, forward"}, {"rank": 660, "latin": "mox", "pos": "adverb", "english": "soon, presently"}, {"rank": 661, "latin": "olim", "pos": "adverb", "english": "once, formerly, one day"}, {"rank": 662, "latin": "deinde", "pos": "adverb", "english": "then, next, afterward"}, {"rank": 663, "latin": "postea", "pos": "adverb", "english": "afterward, later"}, {"rank": 664, "latin": "antea", "pos": "adverb", "english": "before, formerly, previously"}, {"rank": 665, "latin": "interea", "pos": "adverb", "english": "meanwhile, in the meantime"}, {"rank": 666, "latin": "interim", "pos": "adverb", "english": "meanwhile, in the meantime"}, {"rank": 667, "latin": "priusquam", "pos": "conjunction", "english": "before"}, {"rank": 668, "latin": "postquam", "pos": "conjunction", "english": "after, when"}, {"rank": 669, "latin": "antequam", "pos": "conjunction", "english": "before"}, {"rank": 670, "latin": "donec", "pos": "conjunction", "english": "until, as long as, while"}, {"rank": 671, "latin": "dum", "pos": "conjunction", "english": "while, as long as, until"}, {"rank": 672, "latin": "quamdiu", "pos": "conjunction/adverb", "english": "as long as, how long"}, {"rank": 673, "latin": "quotiens", "pos": "adverb", "english": "how often, as often as"}, {"rank": 674, "latin": "quando", "pos": "adverb/conjunction", "english": "when, since"}, {"rank": 675, "latin": "quoniam", "pos": "conjunction", "english": "since, because, seeing that"}, {"rank": 676, "latin": "nam", "pos": "conjunction", "english": "for, because"}, {"rank": 677, "latin": "namque", "pos": "conjunction", "english": "for indeed, for certainly"}, {"rank": 678, "latin": "etenim", "pos": "conjunction", "english": "for indeed, and indeed"}, {"rank": 679, "latin": "at", "pos": "conjunction", "english": "but, yet, however"}, {"rank": 680, "latin": "atque", "pos": "conjunction", "english": "and, and also, and even"}, {"rank": 681, "latin": "ac", "pos": "conjunction", "english": "and, and also"}, {"rank": 682, "latin": "vel", "pos": "conjunction/adverb", "english": "or, even, at least"}, {"rank": 683, "latin": "aut", "pos": "conjunction", "english": "or"}, {"rank": 684, "latin": "sive", "pos": "conjunction", "english": "or if, whether"}, {"rank": 685, "latin": "seu", "pos": "conjunction", "english": "or if, whether"}, {"rank": 686, "latin": "an", "pos": "conjunction", "english": "or (in questions), whether"}, {"rank": 687, "latin": "ne", "pos": "adverb/conjunction", "english": "not, lest, that not (question particle)"}, {"rank": 688, "latin": "nisi", "pos": "conjunction", "english": "unless, if not, except"}, {"rank": 689, "latin": "quasi", "pos": "conjunction/adverb", "english": "as if, as it were, almost"}, {"rank": 690, "latin": "tamquam", "pos": "conjunction/adverb", "english": "as, just as, as if"}, {"rank": 691, "latin": "velut", "pos": "adverb", "english": "as, just as, like"}, {"rank": 692, "latin": "prout", "pos": "conjunction", "english": "as, according as, just as"}, {"rank": 693, "latin": "quemadmodum", "pos": "adverb", "english": "in what manner, just as, how"}, {"rank": 694, "latin": "ceterum", "pos": "adverb/conjunction", "english": "but, besides, for the rest"}, {"rank": 695, "latin": "praeterea", "pos": "adverb", "english": "besides, moreover, furthermore"}, {"rank": 696, "latin": "insuper", "pos": "adverb", "english": "moreover, in addition, above"}, {"rank": 697, "latin": "item", "pos": "adverb", "english": "likewise, also, similarly"}, {"rank": 698, "latin": "pariter", "pos": "adverb", "english": "equally, alike, at the same time"}, {"rank": 699, "latin": "simul", "pos": "adverb", "english": "at the same time, together, simultaneously"}, {"rank": 700, "latin": "una", "pos": "adverb", "english": "together, at the same time"}, {"rank": 701, "latin": "amor", "pos": "noun (m.)", "english": "love"}, {"rank": 702, "latin": "caritas", "pos": "noun (f.)", "english": "charity, love, dearness"}, {"rank": 703, "latin": "dilectio", "pos": "noun (f.)", "english": "love, affection, esteem"}, {"rank": 704, "latin": "gaudium", "pos": "noun (n.)", "english": "joy, gladness, delight"}, {"rank": 705, "latin": "laetitia", "pos": "noun (f.)", "english": "joy, gladness, happiness"}, {"rank": 706, "latin": "dolor", "pos": "noun (m.)", "english": "pain, grief, sorrow"}, {"rank": 707, "latin": "luctus", "pos": "noun (m.)", "english": "mourning, grief, lamentation"}, {"rank": 708, "latin": "ira", "pos": "noun (f.)", "english": "anger, wrath, rage"}, {"rank": 709, "latin": "furor", "pos": "noun (m.)", "english": "fury, madness, rage"}, {"rank": 710, "latin": "invidia", "pos": "noun (f.)", "english": "envy, jealousy, hatred"}, {"rank": 711, "latin": "superbia", "pos": "noun (f.)", "english": "pride, arrogance, haughtiness"}, {"rank": 712, "latin": "humilitas", "pos": "noun (f.)", "english": "humility, lowliness, meekness"}, {"rank": 713, "latin": "patientia", "pos": "noun (f.)", "english": "patience, endurance, suffering"}, {"rank": 714, "latin": "prudentia", "pos": "noun (f.)", "english": "wisdom, prudence, foresight"}, {"rank": 715, "latin": "sapientia", "pos": "noun (f.)", "english": "wisdom"}, {"rank": 716, "latin": "scientia", "pos": "noun (f.)", "english": "knowledge, science, understanding"}, {"rank": 717, "latin": "ignorantia", "pos": "noun (f.)", "english": "ignorance"}, {"rank": 718, "latin": "clementia", "pos": "noun (f.)", "english": "mercy, clemency, mildness"}, {"rank": 719, "latin": "benignitas", "pos": "noun (f.)", "english": "kindness, benignity, goodness"}, {"rank": 720, "latin": "bonitas", "pos": "noun (f.)", "english": "goodness"}, {"rank": 721, "latin": "nequitia", "pos": "noun (f.)", "english": "wickedness, worthlessness"}, {"rank": 722, "latin": "iniquitas", "pos": "noun (f.)", "english": "injustice, iniquity, wickedness"}, {"rank": 723, "latin": "pietas", "pos": "noun (f.)", "english": "piety, devotion, duty"}, {"rank": 724, "latin": "religio", "pos": "noun (f.)", "english": "religion, reverence, scrupulousness"}, {"rank": 725, "latin": "cultus", "pos": "noun (m.)", "english": "worship, cultivation, care"}, {"rank": 726, "latin": "devotio", "pos": "noun (f.)", "english": "devotion, dedication"}, {"rank": 727, "latin": "timor", "pos": "noun (m.)", "english": "fear, dread, awe"}, {"rank": 728, "latin": "spes", "pos": "noun (f.)", "english": "hope, expectation"}, {"rank": 729, "latin": "desperatio", "pos": "noun (f.)", "english": "despair, hopelessness"}, {"rank": 730, "latin": "fiducia", "pos": "noun (f.)", "english": "trust, confidence, assurance"}, {"rank": 731, "latin": "dubitatio", "pos": "noun (f.)", "english": "doubt, hesitation"}, {"rank": 732, "latin": "venia", "pos": "noun (f.)", "english": "pardon, forgiveness, favor"}, {"rank": 733, "latin": "poena", "pos": "noun (f.)", "english": "punishment, penalty"}, {"rank": 734, "latin": "supplicium", "pos": "noun (n.)", "english": "punishment, execution, entreaty"}, {"rank": 735, "latin": "praemium", "pos": "noun (n.)", "english": "reward, prize, recompense"}, {"rank": 736, "latin": "corona", "pos": "noun (f.)", "english": "crown, garland, wreath"}, {"rank": 737, "latin": "thronus", "pos": "noun (m.)", "english": "throne"}, {"rank": 738, "latin": "sceptrum", "pos": "noun (n.)", "english": "scepter"}, {"rank": 739, "latin": "diadema", "pos": "noun (n.)", "english": "crown, diadem"}, {"rank": 740, "latin": "purpura", "pos": "noun (f.)", "english": "purple (cloth), purple garment"}, {"rank": 741, "latin": "coena", "pos": "noun (f.)", "english": "dinner, supper, meal"}, {"rank": 742, "latin": "convivium", "pos": "noun (n.)", "english": "feast, banquet"}, {"rank": 743, "latin": "nuptiae", "pos": "noun (f. pl.)", "english": "wedding, marriage"}, {"rank": 744, "latin": "matrimonium", "pos": "noun (n.)", "english": "marriage, matrimony"}, {"rank": 745, "latin": "hereditas", "pos": "noun (f.)", "english": "inheritance, heritage"}, {"rank": 746, "latin": "possessio", "pos": "noun (f.)", "english": "possession, property"}, {"rank": 747, "latin": "divitiae", "pos": "noun (f. pl.)", "english": "riches, wealth"}, {"rank": 748, "latin": "thesaurus", "pos": "noun (m.)", "english": "treasure, storehouse"}, {"rank": 749, "latin": "talentum", "pos": "noun (n.)", "english": "talent (unit of weight/money)"}, {"rank": 750, "latin": "denarius", "pos": "noun (m.)", "english": "denarius (Roman coin)"}, {"rank": 751, "latin": "census", "pos": "noun (m.)", "english": "census, tax, property assessment"}, {"rank": 752, "latin": "tributum", "pos": "noun (n.)", "english": "tribute, tax"}, {"rank": 753, "latin": "stipendium", "pos": "noun (n.)", "english": "pay, wages, tribute"}, {"rank": 754, "latin": "merces", "pos": "noun (f.)", "english": "wages, reward, rent, pay"}, {"rank": 755, "latin": "operarius", "pos": "noun (m.)", "english": "worker, laborer"}, {"rank": 756, "latin": "messis", "pos": "noun (f.)", "english": "harvest, crop"}, {"rank": 757, "latin": "vinea", "pos": "noun (f.)", "english": "vineyard"}, {"rank": 758, "latin": "hortus", "pos": "noun (m.)", "english": "garden"}, {"rank": 759, "latin": "puteus", "pos": "noun (m.)", "english": "well, pit"}, {"rank": 760, "latin": "fons", "pos": "noun (m.)", "english": "spring, fountain, source"}, {"rank": 761, "latin": "fluvius", "pos": "noun (m.)", "english": "river, stream"}, {"rank": 762, "latin": "lacus", "pos": "noun (m.)", "english": "lake, pit, tank"}, {"rank": 763, "latin": "stagnum", "pos": "noun (n.)", "english": "pool, lake, standing water"}, {"rank": 764, "latin": "littus", "pos": "noun (n.)", "english": "shore, coast, beach"}, {"rank": 765, "latin": "insula", "pos": "noun (f.)", "english": "island"}, {"rank": 766, "latin": "regio", "pos": "noun (f.)", "english": "region, district, territory"}, {"rank": 767, "latin": "provincia", "pos": "noun (f.)", "english": "province"}, {"rank": 768, "latin": "patria", "pos": "noun (f.)", "english": "homeland, fatherland, country"}, {"rank": 769, "latin": "exsilium", "pos": "noun (n.)", "english": "exile, banishment"}, {"rank": 770, "latin": "captivitas", "pos": "noun (f.)", "english": "captivity, capture"}, {"rank": 771, "latin": "captivus", "pos": "noun (m.)/adjective", "english": "captive, prisoner; captive"}, {"rank": 772, "latin": "servitus", "pos": "noun (f.)", "english": "slavery, servitude"}, {"rank": 773, "latin": "libertas", "pos": "noun (f.)", "english": "freedom, liberty"}, {"rank": 774, "latin": "foedus", "pos": "noun (n.)", "english": "covenant, treaty, agreement"}, {"rank": 775, "latin": "pactum", "pos": "noun (n.)", "english": "pact, agreement, covenant"}, {"rank": 776, "latin": "juramentum", "pos": "noun (n.)", "english": "oath"}, {"rank": 777, "latin": "votum", "pos": "noun (n.)", "english": "vow, prayer, wish"}, {"rank": 778, "latin": "decretum", "pos": "noun (n.)", "english": "decree, decision, ordinance"}, {"rank": 779, "latin": "edictum", "pos": "noun (n.)", "english": "edict, proclamation, decree"}, {"rank": 780, "latin": "sententia", "pos": "noun (f.)", "english": "opinion, sentence, judgment"}, {"rank": 781, "latin": "judicium", "pos": "noun (n.)", "english": "judgment, trial, court, decision"}, {"rank": 782, "latin": "tribunal", "pos": "noun (n.)", "english": "tribunal, judgment seat"}, {"rank": 783, "latin": "cathedra", "pos": "noun (f.)", "english": "chair, seat, throne"}, {"rank": 784, "latin": "sedes", "pos": "noun (f.)", "english": "seat, throne, dwelling"}, {"rank": 785, "latin": "fundamentum", "pos": "noun (n.)", "english": "foundation, base, basis"}, {"rank": 786, "latin": "columna", "pos": "noun (f.)", "english": "column, pillar"}, {"rank": 787, "latin": "tectum", "pos": "noun (n.)", "english": "roof, house, dwelling"}, {"rank": 788, "latin": "janua", "pos": "noun (f.)", "english": "door, entrance, gate"}, {"rank": 789, "latin": "fenestra", "pos": "noun (f.)", "english": "window, opening"}, {"rank": 790, "latin": "atrium", "pos": "noun (n.)", "english": "hall, entrance hall, court"}, {"rank": 791, "latin": "cubiculum", "pos": "noun (n.)", "english": "bedroom, chamber"}, {"rank": 792, "latin": "lectus", "pos": "noun (m.)", "english": "bed, couch"}, {"rank": 793, "latin": "mensa", "pos": "noun (f.)", "english": "table"}, {"rank": 794, "latin": "lucerna", "pos": "noun (f.)", "english": "lamp, light"}, {"rank": 795, "latin": "candelabrum", "pos": "noun (n.)", "english": "lampstand, candlestick"}, {"rank": 796, "latin": "vas", "pos": "noun (n.)", "english": "vessel, container, vase"}, {"rank": 797, "latin": "arca", "pos": "noun (f.)", "english": "ark, chest, box, coffin"}, {"rank": 798, "latin": "liber", "pos": "noun (m.)", "english": "book"}, {"rank": 799, "latin": "epistula", "pos": "noun (f.)", "english": "letter, epistle"}, {"rank": 800, "latin": "charta", "pos": "noun (f.)", "english": "paper, document, letter"}, {"rank": 801, "latin": "calamus", "pos": "noun (m.)", "english": "reed, pen"}, {"rank": 802, "latin": "atramentum", "pos": "noun (n.)", "english": "ink"}, {"rank": 803, "latin": "titulus", "pos": "noun (m.)", "english": "title, inscription, label"}, {"rank": 804, "latin": "imago", "pos": "noun (f.)", "english": "image, likeness, statue"}, {"rank": 805, "latin": "figura", "pos": "noun (f.)", "english": "figure, shape, form"}, {"rank": 806, "latin": "forma", "pos": "noun (f.)", "english": "form, shape, beauty"}, {"rank": 807, "latin": "species", "pos": "noun (f.)", "english": "appearance, form, kind"}, {"rank": 808, "latin": "similitudo", "pos": "noun (f.)", "english": "likeness, resemblance, parable"}, {"rank": 809, "latin": "exemplum", "pos": "noun (n.)", "english": "example, model, pattern"}, {"rank": 810, "latin": "typus", "pos": "noun (m.)", "english": "type, figure, model"}, {"rank": 811, "latin": "umbra", "pos": "noun (f.)", "english": "shadow, shade, ghost"}, {"rank": 812, "latin": "stella", "pos": "noun (f.)", "english": "star"}, {"rank": 813, "latin": "sol", "pos": "noun (m.)", "english": "sun"}, {"rank": 814, "latin": "luna", "pos": "noun (f.)", "english": "moon"}, {"rank": 815, "latin": "nubes", "pos": "noun (f.)", "english": "cloud"}, {"rank": 816, "latin": "pluvia", "pos": "noun (f.)", "english": "rain"}, {"rank": 817, "latin": "nix", "pos": "noun (f.)", "english": "snow"}, {"rank": 818, "latin": "grando", "pos": "noun (f.)", "english": "hail, hailstorm"}, {"rank": 819, "latin": "ventus", "pos": "noun (m.)", "english": "wind"}, {"rank": 820, "latin": "tempestas", "pos": "noun (f.)", "english": "storm, tempest, weather"}, {"rank": 821, "latin": "tonitrus", "pos": "noun (m.)", "english": "thunder"}, {"rank": 822, "latin": "fulgur", "pos": "noun (n.)", "english": "lightning, flash, thunderbolt"}, {"rank": 823, "latin": "terrae motus", "pos": "noun phrase", "english": "earthquake"}, {"rank": 824, "latin": "diluvium", "pos": "noun (n.)", "english": "flood, deluge"}, {"rank": 825, "latin": "siccitas", "pos": "noun (f.)", "english": "dryness, drought"}, {"rank": 826, "latin": "fames", "pos": "noun (f.)", "english": "hunger, famine"}, {"rank": 827, "latin": "pestilentia", "pos": "noun (f.)", "english": "plague, pestilence, disease"}, {"rank": 828, "latin": "plaga", "pos": "noun (f.)", "english": "plague, blow, wound, region"}, {"rank": 829, "latin": "vulnus", "pos": "noun (n.)", "english": "wound, injury"}, {"rank": 830, "latin": "morbus", "pos": "noun (m.)", "english": "disease, sickness, illness"}, {"rank": 831, "latin": "infirmitas", "pos": "noun (f.)", "english": "weakness, illness, infirmity"}, {"rank": 832, "latin": "sanitas", "pos": "noun (f.)", "english": "health, sanity, soundness"}, {"rank": 833, "latin": "medicina", "pos": "noun (f.)", "english": "medicine, remedy, cure"}, {"rank": 834, "latin": "medicus", "pos": "noun (m.)", "english": "doctor, physician"}, {"rank": 835, "latin": "lepra", "pos": "noun (f.)", "english": "leprosy"}, {"rank": 836, "latin": "leprosus", "pos": "noun (m.)/adjective", "english": "leper; leprous"}, {"rank": 837, "latin": "caecus", "pos": "adjective/noun", "english": "blind; a blind person"}, {"rank": 838, "latin": "surdus", "pos": "adjective/noun", "english": "deaf; a deaf person"}, {"rank": 839, "latin": "mutus", "pos": "adjective/noun", "english": "mute, silent; a mute person"}, {"rank": 840, "latin": "claudus", "pos": "adjective/noun", "english": "lame; a lame person"}, {"rank": 841, "latin": "paralyticus", "pos": "noun (m.)/adjective", "english": "paralytic; paralyzed"}, {"rank": 842, "latin": "mortuus", "pos": "adjective/noun", "english": "dead; a dead person"}, {"rank": 843, "latin": "vivus", "pos": "adjective", "english": "living, alive"}, {"rank": 844, "latin": "sanus", "pos": "adjective", "english": "healthy, sound, sane"}, {"rank": 845, "latin": "infirmus", "pos": "adjective", "english": "weak, sick, feeble"}, {"rank": 846, "latin": "purus", "pos": "adjective", "english": "pure, clean, undefiled"}, {"rank": 847, "latin": "immundus", "pos": "adjective", "english": "unclean, impure, foul"}, {"rank": 848, "latin": "mundus", "pos": "adjective", "english": "clean, pure, elegant"}, {"rank": 849, "latin": "integer", "pos": "adjective", "english": "whole, complete, untouched, pure"}, {"rank": 850, "latin": "perfectus", "pos": "adjective", "english": "perfect, complete, finished"}, {"rank": 851, "latin": "plenus", "pos": "adjective", "english": "full, complete, abundant"}, {"rank": 852, "latin": "vacuus", "pos": "adjective", "english": "empty, void, free"}, {"rank": 853, "latin": "longus", "pos": "adjective", "english": "long, tall, distant"}, {"rank": 854, "latin": "brevis", "pos": "adjective", "english": "short, brief"}, {"rank": 855, "latin": "latus", "pos": "adjective", "english": "wide, broad"}, {"rank": 856, "latin": "altus", "pos": "adjective", "english": "high, deep, tall"}, {"rank": 857, "latin": "profundus", "pos": "adjective", "english": "deep, profound"}, {"rank": 858, "latin": "gravis", "pos": "adjective", "english": "heavy, serious, important"}, {"rank": 859, "latin": "levis", "pos": "adjective", "english": "light, slight, trivial"}, {"rank": 860, "latin": "durus", "pos": "adjective", "english": "hard, harsh, rough, cruel"}, {"rank": 861, "latin": "mollis", "pos": "adjective", "english": "soft, gentle, tender"}, {"rank": 862, "latin": "dulcis", "pos": "adjective", "english": "sweet, pleasant, dear"}, {"rank": 863, "latin": "amarus", "pos": "adjective", "english": "bitter"}, {"rank": 864, "latin": "calidus", "pos": "adjective", "english": "warm, hot"}, {"rank": 865, "latin": "frigidus", "pos": "adjective", "english": "cold, cool"}, {"rank": 866, "latin": "albus", "pos": "adjective", "english": "white"}, {"rank": 867, "latin": "niger", "pos": "adjective", "english": "black, dark"}, {"rank": 868, "latin": "rubeus", "pos": "adjective", "english": "red"}, {"rank": 869, "latin": "viridis", "pos": "adjective", "english": "green"}, {"rank": 870, "latin": "aureus", "pos": "adjective", "english": "golden, of gold"}, {"rank": 871, "latin": "argenteus", "pos": "adjective", "english": "silver, of silver"}, {"rank": 872, "latin": "ferreus", "pos": "adjective", "english": "iron, of iron, hard"}, {"rank": 873, "latin": "ligneus", "pos": "adjective", "english": "wooden, of wood"}, {"rank": 874, "latin": "lapideus", "pos": "adjective", "english": "stone, of stone"}, {"rank": 875, "latin": "novissimus", "pos": "adjective", "english": "last, final, newest"}, {"rank": 876, "latin": "antiquus", "pos": "adjective", "english": "ancient, old, former"}, {"rank": 877, "latin": "vetus", "pos": "adjective", "english": "old, ancient, former"}, {"rank": 878, "latin": "recens", "pos": "adjective", "english": "recent, new, fresh"}, {"rank": 879, "latin": "certus", "pos": "adjective", "english": "certain, sure, determined"}, {"rank": 880, "latin": "incertus", "pos": "adjective", "english": "uncertain, doubtful"}, {"rank": 881, "latin": "clarus", "pos": "adjective", "english": "clear, bright, famous"}, {"rank": 882, "latin": "obscurus", "pos": "adjective", "english": "dark, obscure, hidden"}, {"rank": 883, "latin": "manifestus", "pos": "adjective", "english": "manifest, clear, evident"}, {"rank": 884, "latin": "occultus", "pos": "adjective", "english": "hidden, secret, concealed"}, {"rank": 885, "latin": "proprius", "pos": "adjective", "english": "one's own, proper, special"}, {"rank": 886, "latin": "communis", "pos": "adjective", "english": "common, shared, public"}, {"rank": 887, "latin": "publicus", "pos": "adjective", "english": "public"}, {"rank": 888, "latin": "privatus", "pos": "adjective", "english": "private, personal"}, {"rank": 889, "latin": "liber", "pos": "adjective", "english": "free"}, {"rank": 890, "latin": "alienus", "pos": "adjective", "english": "another's, foreign, strange"}, {"rank": 891, "latin": "domesticus", "pos": "adjective", "english": "domestic, of the household"}, {"rank": 892, "latin": "externus", "pos": "adjective", "english": "external, foreign, outside"}, {"rank": 893, "latin": "internus", "pos": "adjective", "english": "internal, inward"}, {"rank": 894, "latin": "superior", "pos": "adjective", "english": "upper, higher, former, superior"}, {"rank": 895, "latin": "inferior", "pos": "adjective", "english": "lower, inferior"}, {"rank": 896, "latin": "prior", "pos": "adjective", "english": "former, earlier, previous"}, {"rank": 897, "latin": "posterior", "pos": "adjective", "english": "later, following, next"}, {"rank": 898, "latin": "major", "pos": "adjective", "english": "greater, larger, older"}, {"rank": 899, "latin": "minor", "pos": "adjective", "english": "smaller, lesser, younger"}, {"rank": 900, "latin": "optimus", "pos": "adjective", "english": "best, finest, noblest"}, {"rank": 901, "latin": "pessimus", "pos": "adjective", "english": "worst"}, {"rank": 902, "latin": "quattuor", "pos": "numeral", "english": "four"}, {"rank": 903, "latin": "quinque", "pos": "numeral", "english": "five"}, {"rank": 904, "latin": "sex", "pos": "numeral", "english": "six"}, {"rank": 905, "latin": "septem", "pos": "numeral", "english": "seven"}, {"rank": 906, "latin": "octo", "pos": "numeral", "english": "eight"}, {"rank": 907, "latin": "novem", "pos": "numeral", "english": "nine"}, {"rank": 908, "latin": "decem", "pos": "numeral", "english": "ten"}, {"rank": 909, "latin": "centum", "pos": "numeral", "english": "one hundred"}, {"rank": 910, "latin": "mille", "pos": "numeral/noun", "english": "one thousand"}, {"rank": 911, "latin": "duodecim", "pos": "numeral", "english": "twelve"}, {"rank": 912, "latin": "triginta", "pos": "numeral", "english": "thirty"}, {"rank": 913, "latin": "quadraginta", "pos": "numeral", "english": "forty"}, {"rank": 914, "latin": "quinquaginta", "pos": "numeral", "english": "fifty"}, {"rank": 915, "latin": "septuaginta", "pos": "numeral", "english": "seventy"}, {"rank": 916, "latin": "hora", "pos": "noun (f.)", "english": "hour, time, season"}, {"rank": 917, "latin": "nox", "pos": "noun (f.)", "english": "night"}, {"rank": 918, "latin": "mane", "pos": "noun (n. indecl.)/adverb", "english": "morning; in the morning"}, {"rank": 919, "latin": "vespera", "pos": "noun (f.)", "english": "evening"}, {"rank": 920, "latin": "meridies", "pos": "noun (m.)", "english": "midday, noon, south"}, {"rank": 921, "latin": "sabbatum", "pos": "noun (n.)", "english": "Sabbath"}, {"rank": 922, "latin": "mensis", "pos": "noun (m.)", "english": "month"}, {"rank": 923, "latin": "pascha", "pos": "noun (n.)", "english": "Passover, Easter"}, {"rank": 924, "latin": "pentecoste", "pos": "noun (f.)", "english": "Pentecost"}, {"rank": 925, "latin": "initium", "pos": "noun (n.)", "english": "beginning, origin, start"}, {"rank": 926, "latin": "finis", "pos": "noun (m./f.)", "english": "end, limit, boundary, territory"}, {"rank": 927, "latin": "principium", "pos": "noun (n.)", "english": "beginning, origin, first place"}, {"rank": 928, "latin": "medium", "pos": "noun (n.)", "english": "middle, center, midst"}, {"rank": 929, "latin": "terminus", "pos": "noun (m.)", "english": "boundary, limit, end"}, {"rank": 930, "latin": "ordo", "pos": "noun (m.)", "english": "order, rank, row, series"}, {"rank": 931, "latin": "ratio", "pos": "noun (f.)", "english": "reason, account, plan, method"}, {"rank": 932, "latin": "modus", "pos": "noun (m.)", "english": "manner, way, measure, limit"}, {"rank": 933, "latin": "mos", "pos": "noun (m.)", "english": "custom, habit, manner"}, {"rank": 934, "latin": "consuetudo", "pos": "noun (f.)", "english": "custom, habit, practice"}, {"rank": 935, "latin": "traditio", "pos": "noun (f.)", "english": "tradition, handing over"}, {"rank": 936, "latin": "doctrina", "pos": "noun (f.)", "english": "teaching, doctrine, learning"}, {"rank": 937, "latin": "disciplina", "pos": "noun (f.)", "english": "discipline, instruction, teaching"}, {"rank": 938, "latin": "eruditio", "pos": "noun (f.)", "english": "instruction, learning, education"}, {"rank": 939, "latin": "lectio", "pos": "noun (f.)", "english": "reading, lesson"}, {"rank": 940, "latin": "scriptura", "pos": "noun (f.)", "english": "writing, Scripture"}, {"rank": 941, "latin": "psalmus", "pos": "noun (m.)", "english": "psalm"}, {"rank": 942, "latin": "canticum", "pos": "noun (n.)", "english": "song, canticle, hymn"}, {"rank": 943, "latin": "hymnus", "pos": "noun (m.)", "english": "hymn"}, {"rank": 944, "latin": "vox", "pos": "noun (f.)", "english": "voice, cry, sound, word"}, {"rank": 945, "latin": "sonus", "pos": "noun (m.)", "english": "sound, noise"}, {"rank": 946, "latin": "clamor", "pos": "noun (m.)", "english": "shout, cry, clamor"}, {"rank": 947, "latin": "gemitus", "pos": "noun (m.)", "english": "groan, sigh, moaning"}, {"rank": 948, "latin": "suspirium", "pos": "noun (n.)", "english": "sigh, deep breath"}, {"rank": 949, "latin": "lacrimae", "pos": "noun (f. pl.)", "english": "tears"}, {"rank": 950, "latin": "risus", "pos": "noun (m.)", "english": "laughter, smile"}, {"rank": 951, "latin": "osculum", "pos": "noun (n.)", "english": "kiss"}, {"rank": 952, "latin": "amplexus", "pos": "noun (m.)", "english": "embrace"}, {"rank": 953, "latin": "odor", "pos": "noun (m.)", "english": "smell, fragrance, odor"}, {"rank": 954, "latin": "incensum", "pos": "noun (n.)", "english": "incense"}, {"rank": 955, "latin": "thus", "pos": "noun (n.)", "english": "frankincense"}, {"rank": 956, "latin": "myrrha", "pos": "noun (f.)", "english": "myrrh"}, {"rank": 957, "latin": "sal", "pos": "noun (m./n.)", "english": "salt"}, {"rank": 958, "latin": "fermentum", "pos": "noun (n.)", "english": "leaven, yeast"}, {"rank": 959, "latin": "mel", "pos": "noun (n.)", "english": "honey"}, {"rank": 960, "latin": "lac", "pos": "noun (n.)", "english": "milk"}, {"rank": 961, "latin": "cibus", "pos": "noun (m.)", "english": "food, nourishment"}, {"rank": 962, "latin": "potus", "pos": "noun (m.)", "english": "drink, drinking"}, {"rank": 963, "latin": "calyx", "pos": "noun (m.)", "english": "cup, chalice, goblet"}, {"rank": 964, "latin": "catena", "pos": "noun (f.)", "english": "chain, fetter, bond"}, {"rank": 965, "latin": "vinculum", "pos": "noun (n.)", "english": "chain, bond, fetter"}, {"rank": 966, "latin": "carcer", "pos": "noun (m.)", "english": "prison, jail"}, {"rank": 967, "latin": "ergastulum", "pos": "noun (n.)", "english": "prison, dungeon"}, {"rank": 968, "latin": "flagellum", "pos": "noun (n.)", "english": "whip, scourge"}, {"rank": 969, "latin": "baculus", "pos": "noun (m.)", "english": "staff, stick, rod"}, {"rank": 970, "latin": "virga", "pos": "noun (f.)", "english": "rod, staff, branch, twig"}, {"rank": 971, "latin": "claves", "pos": "noun (f. pl.)", "english": "keys"}, {"rank": 972, "latin": "clavis", "pos": "noun (f.)", "english": "key"}, {"rank": 973, "latin": "annulus", "pos": "noun (m.)", "english": "ring"}, {"rank": 974, "latin": "zona", "pos": "noun (f.)", "english": "belt, girdle, zone"}, {"rank": 975, "latin": "calceamentum", "pos": "noun (n.)", "english": "sandal, shoe"}, {"rank": 976, "latin": "tunica", "pos": "noun (f.)", "english": "tunic, undergarment"}, {"rank": 977, "latin": "pallium", "pos": "noun (n.)", "english": "cloak, mantle, covering"}, {"rank": 978, "latin": "linteum", "pos": "noun (n.)", "english": "linen cloth, towel"}, {"rank": 979, "latin": "velum", "pos": "noun (n.)", "english": "veil, curtain, sail"}, {"rank": 980, "latin": "rete", "pos": "noun (n.)", "english": "net"}, {"rank": 981, "latin": "jugum", "pos": "noun (n.)", "english": "yoke, ridge"}, {"rank": 982, "latin": "aratrum", "pos": "noun (n.)", "english": "plow"}, {"rank": 983, "latin": "falx", "pos": "noun (f.)", "english": "sickle, scythe, pruning hook"}, {"rank": 984, "latin": "securis", "pos": "noun (f.)", "english": "axe"}, {"rank": 985, "latin": "serra", "pos": "noun (f.)", "english": "saw"}, {"rank": 986, "latin": "malleus", "pos": "noun (m.)", "english": "hammer, mallet"}, {"rank": 987, "latin": "clavus", "pos": "noun (m.)", "english": "nail"}, {"rank": 988, "latin": "lancea", "pos": "noun (f.)", "english": "lance, spear"}, {"rank": 989, "latin": "scutum", "pos": "noun (n.)", "english": "shield"}, {"rank": 990, "latin": "galea", "pos": "noun (f.)", "english": "helmet"}, {"rank": 991, "latin": "lorica", "pos": "noun (f.)", "english": "breastplate, armor, corselet"}, {"rank": 992, "latin": "arcus", "pos": "noun (m.)", "english": "bow, arch, rainbow"}, {"rank": 993, "latin": "sagitta", "pos": "noun (f.)", "english": "arrow"}, {"rank": 994, "latin": "tuba", "pos": "noun (f.)", "english": "trumpet"}, {"rank": 995, "latin": "cornu", "pos": "noun (n.)", "english": "horn, trumpet"}, {"rank": 996, "latin": "petra", "pos": "noun (f.)", "english": "rock, stone, crag"}, {"rank": 997, "latin": "rupes", "pos": "noun (f.)", "english": "cliff, rock, crag"}, {"rank": 998, "latin": "spelunca", "pos": "noun (f.)", "english": "cave, cavern, den"}, {"rank": 999, "latin": "fovea", "pos": "noun (f.)", "english": "pit, trap, snare"}, {"rank": 1000, "latin": "abyssus", "pos": "noun (f.)", "english": "abyss, deep, bottomless pit"}];
+
+// ===== DATA LAYER =====
+const STORAGE_KEY = 'vulgate_sr_v2';
+const SUB_DECKS = [];
+for (let i = 0; i < 1000; i += 50) {
+  SUB_DECKS.push({ start: i, end: i + 50, label: `Words ${i+1}–${i+50}` });
+}
+
+function loadData() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (d && d.version === 2) return d;
+  } catch(e) {}
+  return initData();
+}
+
+function initData() {
+  const cards = {};
+  WORDS.forEach(w => {
+    cards[w.rank] = {
+      interval: 0,    // minutes
+      ease: 2.5,
+      due: Date.now(),
+      reps: 0,
+      lapses: 0
+    };
+  });
+  const data = {
+    version: 2,
+    cards,
+    quizWrong: {},    // rank -> count
+    totalReviews: 0,
+    totalQuizzes: 0,
+    quizCorrect: 0,
+    streak: 0,
+    lastReview: null
+  };
+  saveData(data);
+  return data;
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let DATA = loadData();
+
+// ===== SPACED REPETITION (SM-2 variant) =====
+function getDueCards() {
+  const now = Date.now();
+  return WORDS.filter(w => DATA.cards[w.rank].due <= now);
+}
+
+function getNewCards(limit) {
+  return WORDS.filter(w => DATA.cards[w.rank].reps === 0).slice(0, limit);
+}
+
+function reviewCard(rank, quality) {
+  // quality: 0=again, 1=hard, 2=good, 3=easy
+  const c = DATA.cards[rank];
+  DATA.totalReviews++;
+  DATA.lastReview = Date.now();
+
+  if (quality === 0) {
+    c.interval = 1;
+    c.ease = Math.max(1.3, c.ease - 0.2);
+    c.lapses++;
+  } else if (quality === 1) {
+    c.interval = c.reps === 0 ? 1 : Math.max(1, c.interval * 1.2);
+    c.ease = Math.max(1.3, c.ease - 0.15);
+  } else if (quality === 2) {
+    if (c.reps === 0) c.interval = 10;
+    else if (c.reps === 1) c.interval = 1440; // 1 day
+    else c.interval = c.interval * c.ease;
+  } else {
+    if (c.reps === 0) c.interval = 1440 * 4;
+    else c.interval = c.interval * c.ease * 1.3;
+    c.ease += 0.15;
+  }
+  c.reps++;
+  c.due = Date.now() + c.interval * 60000;
+  saveData(DATA);
+}
+
+// ===== SCREEN MANAGEMENT =====
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + name).classList.add('active');
+
+  if (name === 'learn') renderLearn();
+  else if (name === 'decks') renderDecks();
+  else if (name === 'quiz') renderQuiz();
+  else if (name === 'stats') renderStats();
+}
+
+// ===== LEARN SCREEN =====
+let currentSRCard = null;
+let srRevealed = false;
+
+function renderLearn() {
+  const due = getDueCards();
+  const newCards = getNewCards(20);
+  const queue = [...due];
+  // Add new cards if we have fewer than 10 due
+  if (queue.length < 10) {
+    newCards.forEach(w => {
+      if (!queue.find(q => q.rank === w.rank)) queue.push(w);
+    });
+  }
+
+  const learned = WORDS.filter(w => DATA.cards[w.rank].reps > 0).length;
+  const mature = WORDS.filter(w => DATA.cards[w.rank].interval >= 1440 * 21).length;
+
+  document.getElementById('sr-stats').innerHTML =
+    `<span>Due: <b>${due.length}</b></span>` +
+    `<span>New: <b>${newCards.length}</b></span>` +
+    `<span>Learned: <b>${learned}</b></span>`;
+
+  document.getElementById('sr-progress').style.width = (learned / 10) + '%';
+
+  const area = document.getElementById('sr-card-area');
+  if (queue.length === 0) {
+    area.innerHTML = `
+      <div class="sr-done">
+        <h2>All caught up!</h2>
+        <p>No cards due right now.<br>Come back later or add new cards from Decks.</p>
+        <p style="margin-top:16px; font-size:13px; color:#999;">
+          ${learned} / 1000 words learned<br>
+          ${mature} mature (21+ days)
+        </p>
+      </div>`;
+    return;
+  }
+
+  currentSRCard = queue[0];
+  srRevealed = false;
+  renderSRCard();
+}
+
+function renderSRCard() {
+  const w = currentSRCard;
+  const area = document.getElementById('sr-card-area');
+  if (!srRevealed) {
+    area.innerHTML = `
+      <div class="flashcard" onclick="revealSR()">
+        <span class="rank-badge">#${w.rank}</span>
+        <div class="latin">${w.latin}</div>
+        <div class="pos">${w.pos}</div>
+        <div class="tap-hint">Tap to reveal</div>
+      </div>`;
+  } else {
+    area.innerHTML = `
+      <div class="flashcard">
+        <span class="rank-badge">#${w.rank}</span>
+        <div class="latin">${w.latin}</div>
+        <div class="pos">${w.pos}</div>
+        <div class="english">${w.english}</div>
+      </div>
+      <div class="sr-buttons">
+        <button class="btn-again" onclick="answerSR(0)">Again</button>
+        <button class="btn-hard" onclick="answerSR(1)">Hard</button>
+        <button class="btn-good" onclick="answerSR(2)">Good</button>
+        <button class="btn-easy" onclick="answerSR(3)">Easy</button>
+      </div>`;
+  }
+}
+
+function revealSR() {
+  srRevealed = true;
+  renderSRCard();
+}
+
+function answerSR(quality) {
+  reviewCard(currentSRCard.rank, quality);
+  renderLearn();
+}
+
+// ===== DECKS SCREEN =====
+function renderDecks() {
+  const list = document.getElementById('deck-list');
+  list.innerHTML = SUB_DECKS.map(d => {
+    const words = WORDS.slice(d.start, d.end);
+    const learned = words.filter(w => DATA.cards[w.rank].reps > 0).length;
+    return `
+      <div class="deck-item" onclick="openDeck(${d.start}, ${d.end})">
+        <div class="deck-info">
+          <h3>${d.label}</h3>
+          <p>${learned}/50 reviewed</p>
+        </div>
+        <span class="deck-count">${d.end <= 100 ? 'Core' : d.end <= 250 ? 'Common' : d.end <= 500 ? 'Intermediate' : 'Advanced'}</span>
+      </div>`;
+  }).join('');
+}
+
+function openDeck(start, end) {
+  const words = WORDS.slice(start, end);
+  document.getElementById('browse-title').textContent = `Words ${start+1}–${end}`;
+  const list = document.getElementById('word-list');
+  list.innerHTML = words.map(w => `
+    <div class="word-row" onclick="this.classList.toggle('revealed')">
+      <div class="wr-left">
+        <span class="wr-rank">${w.rank}</span>
+        <span class="wr-latin">${w.latin}</span>
+        <span class="wr-pos">${w.pos}</span>
+      </div>
+      <span class="wr-english">${w.english}</span>
+    </div>`).join('');
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-browse').classList.add('active');
+}
+
+// ===== QUIZ SCREEN =====
+let quizDeck = 'all';
+let quizCurrent = null;
+let quizAnswered = false;
+let quizSessionCorrect = 0;
+let quizSessionTotal = 0;
+
+function renderQuiz() {
+  const src = document.getElementById('quiz-source');
+  const options = [{key:'all', label:'All 1000'}];
+  SUB_DECKS.forEach(d => options.push({key:`${d.start}-${d.end}`, label: d.label}));
+
+  src.innerHTML = options.map(o =>
+    `<button class="${quizDeck===o.key?'active':''}" onclick="setQuizDeck('${o.key}')">${o.label}</button>`
+  ).join('');
+
+  renderQuizScore();
+  nextQuizQuestion();
+}
+
+function setQuizDeck(key) {
+  quizDeck = key;
+  quizSessionCorrect = 0;
+  quizSessionTotal = 0;
+  renderQuiz();
+}
+
+function getQuizPool() {
+  if (quizDeck === 'all') return WORDS;
+  const [s, e] = quizDeck.split('-').map(Number);
+  return WORDS.slice(s, e);
+}
+
+function renderQuizScore() {
+  const wrongTotal = Object.values(DATA.quizWrong).reduce((a,b) => a+b, 0);
+  document.getElementById('quiz-score').innerHTML =
+    `Session: <b>${quizSessionCorrect}/${quizSessionTotal}</b> | Total wrong: <b>${wrongTotal}</b>`;
+}
+
+function nextQuizQuestion() {
+  const pool = getQuizPool();
+  if (pool.length < 4) return;
+
+  quizAnswered = false;
+  const idx = Math.floor(Math.random() * pool.length);
+  quizCurrent = pool[idx];
+
+  // Pick 3 wrong answers from full word list
+  const wrongOptions = [];
+  while (wrongOptions.length < 3) {
+    const w = WORDS[Math.floor(Math.random() * WORDS.length)];
+    if (w.rank !== quizCurrent.rank && !wrongOptions.find(o => o.rank === w.rank)) {
+      wrongOptions.push(w);
+    }
+  }
+
+  const choices = [quizCurrent, ...wrongOptions].sort(() => Math.random() - 0.5);
+
+  const area = document.getElementById('quiz-area');
+  area.innerHTML = `
+    <div class="flashcard" style="cursor:default; min-height:160px;">
+      <span class="rank-badge">#${quizCurrent.rank}</span>
+      <div class="latin">${quizCurrent.latin}</div>
+      <div class="pos">${quizCurrent.pos}</div>
+    </div>
+    <div class="quiz-options">
+      ${choices.map(c => `
+        <button class="quiz-option" data-rank="${c.rank}" onclick="quizAnswer(this, ${c.rank})">
+          ${c.english}
+        </button>`).join('')}
+    </div>
+    <button class="quiz-next" id="quiz-next-btn" onclick="nextQuizQuestion();renderQuizScore();">Next Question</button>`;
+}
+
+function quizAnswer(btn, chosenRank) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  quizSessionTotal++;
+  DATA.totalQuizzes++;
+
+  const correct = chosenRank === quizCurrent.rank;
+  if (correct) {
+    quizSessionCorrect++;
+    DATA.quizCorrect++;
+    btn.classList.add('correct');
+  } else {
+    btn.classList.add('wrong');
+    DATA.quizWrong[quizCurrent.rank] = (DATA.quizWrong[quizCurrent.rank] || 0) + 1;
+    // Highlight the correct answer
+    document.querySelectorAll('.quiz-option').forEach(b => {
+      if (parseInt(b.dataset.rank) === quizCurrent.rank) b.classList.add('correct');
+      else if (b !== btn) b.classList.add('dimmed');
+    });
+  }
+
+  document.querySelectorAll('.quiz-option').forEach(b => {
+    if (!b.classList.contains('correct') && !b.classList.contains('wrong'))
+      b.classList.add('dimmed');
+  });
+
+  saveData(DATA);
+  renderQuizScore();
+  document.getElementById('quiz-next-btn').style.display = 'block';
+}
+
+// ===== STATS SCREEN =====
+function renderStats() {
+  const learned = WORDS.filter(w => DATA.cards[w.rank].reps > 0).length;
+  const mature = WORDS.filter(w => DATA.cards[w.rank].interval >= 1440 * 21).length;
+  const due = getDueCards().length;
+  const wrongTotal = Object.values(DATA.quizWrong).reduce((a,b) => a+b, 0);
+  const wrongWords = Object.keys(DATA.quizWrong).length;
+
+  // Most missed words
+  const topMissed = Object.entries(DATA.quizWrong)
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([rank, count]) => {
+      const w = WORDS.find(w => w.rank == rank);
+      return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #333;">
+        <span>${w.latin} <span style="color:#999;font-size:12px;">(${w.english})</span></span>
+        <span style="color:var(--fail);font-weight:600;">${count}x</span>
+      </div>`;
+    }).join('');
+
+  document.getElementById('stats-area').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="stat-card">
+        <h3>Words Learned</h3>
+        <div class="big-num">${learned}</div>
+        <div class="sub">of 1,000</div>
+      </div>
+      <div class="stat-card">
+        <h3>Mature Cards</h3>
+        <div class="big-num">${mature}</div>
+        <div class="sub">21+ day interval</div>
+      </div>
+      <div class="stat-card">
+        <h3>Total Reviews</h3>
+        <div class="big-num">${DATA.totalReviews}</div>
+        <div class="sub">SR reviews</div>
+      </div>
+      <div class="stat-card">
+        <h3>Quiz Accuracy</h3>
+        <div class="big-num">${DATA.totalQuizzes ? Math.round(DATA.quizCorrect/DATA.totalQuizzes*100) : 0}%</div>
+        <div class="sub">${DATA.quizCorrect}/${DATA.totalQuizzes} correct</div>
+      </div>
+    </div>
+    <div class="stat-card" style="margin-top:10px;">
+      <h3>Cards Due Now</h3>
+      <div class="big-num">${due}</div>
+    </div>
+
+    ${topMissed ? `
+    <div class="stat-card" style="margin-top:10px;">
+      <h3>Most Missed (Quiz)</h3>
+      ${topMissed}
+    </div>` : ''}
+
+    <div class="reset-section">
+      <h3>Reset Options</h3>
+      <div class="reset-row">
+        <span>Quiz wrong counts</span>
+        <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetQuizWrong()">Reset</button>
+      </div>
+      <div class="reset-row">
+        <span>All quiz stats</span>
+        <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetQuizAll()">Reset</button>
+      </div>
+      <div class="reset-row">
+        <span>SR progress</span>
+        <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetSR()">Reset</button>
+      </div>
+      <div class="reset-row">
+        <span>Everything</span>
+        <button class="reset-btn" style="padding:8px 16px;font-size:13px;" onclick="resetAll()">Reset All</button>
+      </div>
+    </div>`;
+}
+
+function resetQuizWrong() {
+  if (!confirm('Reset all quiz wrong counts?')) return;
+  DATA.quizWrong = {};
+  saveData(DATA);
+  renderStats();
+}
+function resetQuizAll() {
+  if (!confirm('Reset all quiz statistics?')) return;
+  DATA.quizWrong = {};
+  DATA.totalQuizzes = 0;
+  DATA.quizCorrect = 0;
+  quizSessionCorrect = 0;
+  quizSessionTotal = 0;
+  saveData(DATA);
+  renderStats();
+}
+function resetSR() {
+  if (!confirm('Reset all spaced repetition progress? This cannot be undone.')) return;
+  WORDS.forEach(w => {
+    DATA.cards[w.rank] = { interval:0, ease:2.5, due:Date.now(), reps:0, lapses:0 };
+  });
+  DATA.totalReviews = 0;
+  saveData(DATA);
+  renderStats();
+}
+function resetAll() {
+  if (!confirm('Reset EVERYTHING? All progress will be lost.')) return;
+  DATA = initData();
+  quizSessionCorrect = 0;
+  quizSessionTotal = 0;
+  renderStats();
+}
+
+// ===== INIT =====
+renderLearn();
+</script>
+</body>
+</html>
